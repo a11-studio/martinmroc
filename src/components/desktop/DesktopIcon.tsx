@@ -7,6 +7,8 @@ import { useDesktopStore } from "@/store/desktopStore";
 import { windowId } from "@/lib/utils";
 import type { DesktopIconData } from "@/types";
 
+const SELECTION_TRANSITION = { duration: 0.14, ease: "easeOut" };
+
 interface DesktopIconProps {
   icon: DesktopIconData;
   position: { x: number; y: number };
@@ -18,11 +20,9 @@ function DesktopIconInner({ icon, position }: DesktopIconProps) {
   const { selectIcon, selectedIconId, setIconPosition } = useDesktopStore();
   const isSelected = selectedIconId === icon.id;
 
-  // Framer motion values own the position — avoids transform doubling on drag end
   const x = useMotionValue(position.x);
   const y = useMotionValue(position.y);
 
-  // Sync if store position changes externally (cleanup, reset)
   useEffect(() => {
     x.set(position.x);
     y.set(position.y);
@@ -71,21 +71,16 @@ function DesktopIconInner({ icon, position }: DesktopIconProps) {
 
   return (
     <motion.div
-      className="absolute flex flex-col items-center gap-[6px] cursor-default"
+      className="absolute flex flex-col items-center gap-[6px] cursor-default desktop-icon"
       style={{ x, y, left: 0, top: 0, width: 88 }}
       data-icon-id={icon.id}
       drag
       dragMomentum={false}
       dragElastic={0}
-      onDragStart={() => {
-        didDrag.current = true;
-      }}
+      onDragStart={() => { didDrag.current = true; }}
       onDragEnd={() => {
-        // Persist final position from motion values to store
         setIconPosition(icon.id, { x: x.get(), y: y.get() });
-        setTimeout(() => {
-          didDrag.current = false;
-        }, 50);
+        setTimeout(() => { didDrag.current = false; }, 50);
       }}
       whileTap={prefersReduced ? {} : { scale: 0.98 }}
       onClick={handleClick}
@@ -93,44 +88,28 @@ function DesktopIconInner({ icon, position }: DesktopIconProps) {
       tabIndex={0}
       role="button"
       aria-label={`Open ${icon.label}`}
+      aria-selected={isSelected}
     >
-      {/* Thumbnail */}
-      <div
-        className="relative flex items-center justify-center"
-        style={{ width: 72, height: 72 }}
-      >
-        {/* Selection ring */}
-        {isSelected && (
-          <div
-            className="absolute inset-[-4px] rounded-xl"
-            style={{
-              background: "rgba(255,255,255,0.12)",
-              boxShadow: "0 0 0 1.5px rgba(255,255,255,0.28)",
-            }}
-          />
-        )}
+      {/* Thumbnail container — selection highlight wraps this */}
+      <div className="relative flex items-center justify-center" style={{ width: 72, height: 72 }}>
+        <motion.div
+          className="absolute inset-0 rounded-[12px] pointer-events-none"
+          initial={false}
+          animate={{
+            background: isSelected ? "rgba(255,255,255,0.08)" : "transparent",
+            boxShadow: isSelected
+              ? "inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 0 12px rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.12)"
+              : "none",
+          }}
+          transition={SELECTION_TRANSITION}
+        />
 
         {isFolder ? (
-          <img
-            src={icon.thumbnailSrc}
-            alt={icon.label}
-            className="w-full h-full object-contain pointer-events-none"
-            draggable={false}
-          />
+          <img src={icon.thumbnailSrc} alt={icon.label} className="w-full h-full object-contain pointer-events-none" draggable={false} />
         ) : isAbout ? (
-          <img
-            src={icon.thumbnailSrc}
-            alt={icon.label}
-            className="w-[52px] h-[52px] object-contain pointer-events-none"
-            draggable={false}
-          />
+          <img src={icon.thumbnailSrc} alt={icon.label} className="w-[52px] h-[52px] object-contain pointer-events-none" draggable={false} />
         ) : isPlay ? (
-          <img
-            src={icon.thumbnailSrc}
-            alt={icon.label}
-            className="w-[72px] h-[72px] object-contain pointer-events-none"
-            draggable={false}
-          />
+          <img src={icon.thumbnailSrc} alt={icon.label} className="w-[72px] h-[72px] object-contain pointer-events-none" draggable={false} />
         ) : (
           <img
             src={icon.thumbnailSrc}
@@ -142,10 +121,24 @@ function DesktopIconInner({ icon, position }: DesktopIconProps) {
         )}
       </div>
 
-      {/* Label */}
-      <span className="icon-label w-full leading-tight text-center px-1 pointer-events-none">
+      {/* Label — blue pill when selected, fits content (macOS Finder style) */}
+      <motion.span
+        className="inline-block text-center pointer-events-none px-[8px] py-[3px] rounded-lg max-w-[88px] truncate"
+        style={{
+          fontSize: 13,
+          fontWeight: 500,
+          lineHeight: 1.2,
+          textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+        }}
+        initial={false}
+        animate={{
+          backgroundColor: isSelected ? "#0A84FF" : "transparent",
+          color: "white",
+        }}
+        transition={SELECTION_TRANSITION}
+      >
         {icon.label}
-      </span>
+      </motion.span>
     </motion.div>
   );
 }
