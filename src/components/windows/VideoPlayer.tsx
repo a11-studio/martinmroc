@@ -34,11 +34,12 @@ export default function VideoPlayer() {
       {/* Video */}
       <video
         ref={videoRef}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-cover"
         src={VIDEO.play}
         poster={VIDEO.poster}
         preload="metadata"
         playsInline
+        autoPlay
         controls
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
