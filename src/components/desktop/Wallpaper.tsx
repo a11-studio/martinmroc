@@ -8,7 +8,7 @@ export default function Wallpaper() {
       <img
         src={WALLPAPER.background}
         alt=""
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        className="absolute inset-0 w-full h-full object-cover object-[center_25%] pointer-events-none"
         draggable={false}
       />
     </div>
