@@ -36,6 +36,7 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
   const { startLoading, stopLoading } = useLoadingStore();
   const [selectedFolder, setSelectedFolder] = useState("all");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const visibleItems =
@@ -72,6 +73,10 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
 
   const handleItemClick = useCallback(
     (item: (typeof FINDER_ITEMS)[0]) => {
+      if (isMobile) {
+        openImageWindow(item);
+        return;
+      }
       if (clickTimerRef.current) {
         clearTimeout(clickTimerRef.current);
         clickTimerRef.current = null;
@@ -83,7 +88,7 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
         clickTimerRef.current = null;
       }, 280);
     },
-    [openImageWindow]
+    [isMobile, openImageWindow]
   );
 
   const selectedLabel =
@@ -93,8 +98,8 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
 
   return (
     <div className="flex h-full w-full overflow-hidden" style={{ borderRadius: 26 }}>
-      {/* ── Sidebar: liquid glass (isolation prevents blend from right-pane clicks) ── */}
-      <div
+      {/* ── Sidebar: hidden on mobile ── */}
+      {!isMobile && <div
         className="relative w-[240px] shrink-0 h-full overflow-hidden"
         style={{ borderRadius: "26px 0 0 26px", isolation: "isolate" }}
       >
@@ -184,15 +189,15 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
             </span>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ── Right pane ── */}
       <div
         className="flex-1 flex flex-col min-w-0 bg-white"
-        style={{ borderRadius: "0 26px 26px 0" }}
+        style={{ borderRadius: isMobile ? "26px" : "0 26px 26px 0" }}
       >
-        {/* Toolbar — also a drag area */}
-        <div
+        {/* Toolbar — hidden on mobile */}
+        {!isMobile && <div
           className="window-drag-area flex items-center gap-[8px] px-[12px] pt-[10px] pb-[10px] shrink-0"
           style={{ cursor: "default" }}
         >
@@ -230,7 +235,7 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
           </span>
 
           <div className="flex-1 min-w-0" />
-        </div>
+        </div>}
 
         {/* Content grid */}
         <div

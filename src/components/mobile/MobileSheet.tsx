@@ -6,6 +6,7 @@ import ProjectWindow from "@/components/windows/ProjectWindow";
 import AboutWindow from "@/components/windows/AboutWindow";
 import VideoPlayer from "@/components/windows/VideoPlayer";
 import MeWindow from "@/components/windows/MeWindow";
+import ImageWindow from "@/components/windows/ImageWindow";
 import FinderWindow from "@/components/windows/FinderWindow";
 
 export default function MobileSheet() {
@@ -37,7 +38,7 @@ export default function MobileSheet() {
           >
             <div className="glass-window h-full flex flex-col">
               {/* Handle + header */}
-              <div className="flex flex-col items-center pt-3 pb-2 border-b border-black/[0.06] shrink-0">
+              <div className={`flex flex-col items-center pt-3 pb-2 shrink-0 ${topWindow.type !== "finder" ? "border-b border-black/[0.06]" : ""}`}>
                 <div className="w-10 h-1 rounded-full bg-black/20 mb-3" />
                 <div className="flex items-center justify-between w-full px-5">
                   <span className="text-[15px] font-semibold text-[#1c1c1e]">
@@ -60,8 +61,9 @@ export default function MobileSheet() {
                 )}
                 {topWindow.type === "about" && <AboutWindow />}
                 {topWindow.type === "video" && <VideoPlayer />}
-                {topWindow.type === "me" && <MeWindow />}
-                {topWindow.type === "finder" && <FinderWindow />}
+                {topWindow.type === "me" && <ImageWindow winId={topWindow.id} projectId="me" />}
+                {topWindow.type === "image" && <ImageWindow winId={topWindow.id} projectId={topWindow.props?.projectId} />}
+                {topWindow.type === "finder" && <FinderWindow winId={topWindow.id} />}
               </div>
             </div>
           </motion.div>

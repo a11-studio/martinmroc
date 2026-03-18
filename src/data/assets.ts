@@ -2,9 +2,10 @@
 // Asset Registry — all paths local WebP, served from /public
 // ─────────────────────────────────────────────────────────────────
 
-// Wallpaper — 1920 px WebP
+// Wallpaper
 export const WALLPAPER = {
   background: "/images/bg.png",
+  mobile: "/images/bg-mobile.png",
 } as const;
 
 // Desktop icon thumbnails (≤200 px WebP)

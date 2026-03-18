@@ -82,8 +82,8 @@
 
   .glass-window {
     background: rgba(255, 255, 255, 0.78);
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
+    backdrop-filter: blur(3px) !important;
+    -webkit-backdrop-filter: blur(3px);
   }
 
   .glass-window-header {
