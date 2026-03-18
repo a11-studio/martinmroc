@@ -4,7 +4,9 @@ import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { useWindowStore } from "@/store/windowStore";
-import { ICON_THUMBNAILS } from "@/data/assets";
+import { useLoadingStore } from "@/store/loadingStore";
+import { ICON_THUMBNAILS, PROJECT_IMAGES } from "@/data/assets";
+import { getCachedImageSize, preloadImageDimensions } from "@/lib/imageDimensions";
 import { windowId } from "@/lib/utils";
 
 const FINDER_ITEMS = [
@@ -31,6 +33,7 @@ const SELECTION_TRANSITION = { duration: 0.14, ease: "easeOut" as const };
 export default function FinderWindow({ winId }: FinderWindowProps) {
   const prefersReduced = useReducedMotion();
   const { openWindow, closeWindow, minimizeWindow, toggleMaximize } = useWindowStore();
+  const { startLoading, stopLoading } = useLoadingStore();
   const [selectedFolder, setSelectedFolder] = useState("all");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -40,17 +43,39 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
       ? FINDER_ITEMS
       : FINDER_ITEMS.filter((item) => item.id === selectedFolder);
 
+  const openImageWindow = useCallback(
+    async (item: (typeof FINDER_ITEMS)[0]) => {
+      let size: { width: number; height: number } | undefined;
+      if (item.id in PROJECT_IMAGES) {
+        const cached = getCachedImageSize(item.id);
+        if (cached) {
+          size = cached;
+        } else {
+          startLoading();
+          try {
+            size = await preloadImageDimensions(item.id, PROJECT_IMAGES[item.id as keyof typeof PROJECT_IMAGES]);
+          } finally {
+            stopLoading();
+          }
+        }
+      }
+      openWindow({
+        id: windowId(item.id),
+        type: "image",
+        title: item.label,
+        props: { projectId: item.id },
+        size,
+      });
+    },
+    [openWindow, startLoading, stopLoading]
+  );
+
   const handleItemClick = useCallback(
     (item: (typeof FINDER_ITEMS)[0]) => {
       if (clickTimerRef.current) {
         clearTimeout(clickTimerRef.current);
         clickTimerRef.current = null;
-        openWindow({
-          id: windowId(item.id),
-          type: "project",
-          title: item.label,
-          props: { projectId: item.id },
-        });
+        openImageWindow(item);
         return;
       }
       setSelectedItemId(item.id);
@@ -58,7 +83,7 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
         clickTimerRef.current = null;
       }, 280);
     },
-    [openWindow]
+    [openImageWindow]
   );
 
   const selectedLabel =
@@ -120,12 +145,8 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
                 onClick={() => setSelectedFolder(folder.id)}
                 onDoubleClick={() => {
                   if (folder.id !== "all") {
-                    openWindow({
-                      id: windowId(folder.id),
-                      type: "project",
-                      title: folder.label + ".jpg",
-                      props: { projectId: folder.id },
-                    });
+                    const item = FINDER_ITEMS.find((i) => i.id === folder.id);
+                    if (item) openImageWindow(item);
                   }
                 }}
               >
@@ -235,12 +256,7 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      openWindow({
-                        id: windowId(item.id),
-                        type: "project",
-                        title: item.label,
-                        props: { projectId: item.id },
-                      });
+                      openImageWindow(item);
                     }
                   }}
                 >

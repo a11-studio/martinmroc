@@ -12,7 +12,7 @@ export default function Dock() {
     // Static wrapper keeps centering — motion.div handles y + opacity only
     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-end">
       <motion.div
-        initial={{ y: 0, opacity: 1 }}
+        initial={{ y: 80, opacity: 0 }}
         animate={isAnyMaximized ? { y: 100, opacity: 0 } : { y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 380, damping: 38, mass: 1 }}
         style={{ pointerEvents: isAnyMaximized ? "none" : "auto" }}
