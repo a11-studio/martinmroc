@@ -8,6 +8,8 @@ interface DesktopStore {
   iconPositions: Record<string, Position>;
   selectedIconId: string | null;
   contextMenu: ContextMenuState;
+  /** True when user has dragged icons or run Clean Up / Sort */
+  hasModifiedPositions: boolean;
 
   setIconPosition: (id: string, pos: Position) => void;
   selectIcon: (id: string | null) => void;
@@ -43,10 +45,12 @@ export const useDesktopStore = create<DesktopStore>((set, get) => ({
   iconPositions: {},
   selectedIconId: null,
   contextMenu: { visible: false, position: { x: 0, y: 0 } },
+  hasModifiedPositions: false,
 
   setIconPosition: (id, pos) => {
     set((state) => ({
       iconPositions: { ...state.iconPositions, [id]: pos },
+      hasModifiedPositions: true,
     }));
   },
 
@@ -78,7 +82,7 @@ export const useDesktopStore = create<DesktopStore>((set, get) => ({
   },
 
   resetIconPositions: () => {
-    set({ iconPositions: buildDefaultPositions() });
+    set({ iconPositions: buildDefaultPositions(), hasModifiedPositions: false });
   },
 
   sortIconsByName: () => {
@@ -86,7 +90,7 @@ export const useDesktopStore = create<DesktopStore>((set, get) => ({
       a.label.localeCompare(b.label)
     );
     const positions = buildCleanupGrid(sorted.map((i) => i.id));
-    set({ iconPositions: positions });
+    set({ iconPositions: positions, hasModifiedPositions: true });
   },
 
   getCleanupPositions: () => {

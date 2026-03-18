@@ -13,6 +13,7 @@ interface MenuItem {
   action: () => void;
   destructive?: boolean;
   dividerAfter?: boolean;
+  disabled?: boolean;
 }
 
 export default function ContextMenu() {
@@ -22,6 +23,7 @@ export default function ContextMenu() {
     contextMenu,
     closeContextMenu,
     iconPositions,
+    hasModifiedPositions,
     resetIconPositions,
     sortIconsByName,
     setIconPosition,
@@ -88,6 +90,7 @@ export default function ContextMenu() {
       label: "Reset Positions",
       action: handleReset,
       dividerAfter: true,
+      disabled: !hasModifiedPositions,
     },
     {
       id: "cancel",
@@ -123,7 +126,7 @@ export default function ContextMenu() {
       {contextMenu.visible && (
         <motion.div
           ref={menuRef}
-          className="fixed z-[9000] min-w-[188px] rounded-[10px] overflow-hidden py-1 glass-context-menu"
+          className="fixed z-[9000] min-w-[160px] rounded-[13px] overflow-hidden px-1.5 py-[5px] flex flex-col gap-0.5 glass-context-menu"
           style={{
             left: contextMenu.position.x,
             top: contextMenu.position.y,
@@ -142,14 +145,16 @@ export default function ContextMenu() {
           {menuItems.map((item) => (
             <div key={item.id}>
               <button
-                className="w-full text-left px-3 py-[6px] text-[13px] font-medium text-[#1c1c1e] hover:bg-[rgba(0,0,0,0.06)] active:bg-[rgba(0,0,0,0.1)] transition-colors duration-75 focus-visible:bg-[rgba(0,0,0,0.06)] outline-none"
-                onClick={item.action}
+                className={`glass-context-menu-item w-full text-left px-2.5 min-h-[24px] flex items-center rounded-[8px] transition-colors duration-75 outline-none ${item.disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
+                onClick={item.disabled ? undefined : item.action}
                 role="menuitem"
+                disabled={item.disabled}
+                aria-disabled={item.disabled}
               >
                 {item.label}
               </button>
               {item.dividerAfter && (
-                <div className="mx-3 my-1 h-px bg-[rgba(0,0,0,0.08)]" />
+                <div className="my-1 h-px bg-[rgba(0,0,0,0.08)]" />
               )}
             </div>
           ))}
