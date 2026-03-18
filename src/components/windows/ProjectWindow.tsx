@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { PROJECTS } from "@/data/projects";
-import { PROJECT_IMAGES } from "@/data/assets";
+import { PROJECT_IMAGES, ICON_THUMBNAILS } from "@/data/assets";
 
 interface ProjectWindowProps {
   projectId?: string;
@@ -21,11 +23,16 @@ const TAG_COLORS: Record<string, string> = {
 };
 
 export default function ProjectWindow({ projectId }: ProjectWindowProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
   const project = projectId ? PROJECTS[projectId] : null;
   const imageSrc =
     projectId && PROJECT_IMAGES[projectId as keyof typeof PROJECT_IMAGES]
       ? PROJECT_IMAGES[projectId as keyof typeof PROJECT_IMAGES]
       : project?.imageSrc;
+  const thumbnailSrc =
+    projectId && projectId in ICON_THUMBNAILS
+      ? ICON_THUMBNAILS[projectId as keyof typeof ICON_THUMBNAILS]
+      : null;
 
   if (!project) {
     return (
@@ -37,16 +44,30 @@ export default function ProjectWindow({ projectId }: ProjectWindowProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Full-bleed image */}
-      <div className="relative flex-shrink-0 h-[54%] bg-gray-100 overflow-hidden">
-        <img
+      {/* Full-bleed image — blur-up: thumbnail first, then full-res fade */}
+      <div className="relative flex-shrink-0 h-[54%] bg-gray-100 overflow-hidden flex items-center justify-center">
+        {thumbnailSrc && (
+          <div
+            className="absolute inset-0 scale-110"
+            style={{
+              backgroundImage: `url(${thumbnailSrc})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              filter: "blur(24px)",
+            }}
+          />
+        )}
+        <motion.img
           src={imageSrc}
           alt={project.title}
-          className="w-full h-full object-cover"
+          className="relative w-full h-full object-contain z-10"
           loading="lazy"
+          onLoad={() => setImageLoaded(true)}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: imageLoaded ? 1 : 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
         />
-        {/* Subtle bottom gradient overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white/80 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white/80 to-transparent z-20 pointer-events-none" />
       </div>
 
       {/* Metadata */}

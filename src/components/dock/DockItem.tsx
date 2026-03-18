@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import type { DockItemData } from "@/types";
 
@@ -17,16 +18,16 @@ function DockItemInner({ item }: DockItemProps) {
 
   const renderIcon = () => {
     const rounded = "rounded-[12.46px]";
-    const imgBase = "absolute inset-0 w-full h-full object-contain object-center pointer-events-none";
 
     if (item.render === "composite" && item.compositeSrc) {
       return (
         <div className={`relative size-full overflow-hidden ${rounded}`}>
-          <img src={item.compositeSrc.bg} alt="" className={imgBase} draggable={false} />
-          <img
+          <Image src={item.compositeSrc.bg} alt="" fill className="object-contain object-center pointer-events-none" draggable={false} />
+          <Image
             src={item.compositeSrc.text}
             alt={item.label}
-            className={imgBase}
+            fill
+            className="object-contain object-center pointer-events-none"
             style={{ padding: "25.43% 17.33% 28.42% 22.5%" }}
             draggable={false}
           />
@@ -46,21 +47,22 @@ function DockItemInner({ item }: DockItemProps) {
           }}
         >
           <div className={`absolute inset-[1%] bg-[rgba(217,217,217,0.14)] ${rounded}`} />
-          <img
+          <Image
             src={item.iconSrc}
             alt={item.label}
-            className="absolute w-[69%] h-[77%] left-[15.6%] top-[14%] object-contain object-center pointer-events-none"
+            width={33}
+            height={37}
+            className="absolute left-[15.6%] top-[14%] object-contain object-center pointer-events-none"
             draggable={false}
           />
         </div>
       );
     }
 
-    // single (Figma, Mail, WhatsApp, Trash)
     if (item.iconSrc) {
       return (
         <div className={`relative size-full overflow-hidden ${rounded}`}>
-          <img src={item.iconSrc} alt={item.label} className={imgBase} draggable={false} />
+          <Image src={item.iconSrc} alt={item.label} fill className="object-contain object-center pointer-events-none" draggable={false} />
         </div>
       );
     }
@@ -70,7 +72,6 @@ function DockItemInner({ item }: DockItemProps) {
 
   return (
     <div className="relative flex flex-col items-center">
-      {/* Tooltip */}
       <AnimatePresence>
         {hovered && (
           <motion.div
@@ -81,7 +82,7 @@ function DockItemInner({ item }: DockItemProps) {
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
             <div
-              className="px-[10px] py-[5px] rounded-[7px] whitespace-nowrap"
+              className="dock-tooltip px-[10px] py-[5px] rounded-[7px] whitespace-nowrap"
               style={{
                 background: "rgba(30,30,32,0.82)",
                 backdropFilter: "blur(12px)",
@@ -97,14 +98,9 @@ function DockItemInner({ item }: DockItemProps) {
         )}
       </AnimatePresence>
 
-      {/* Icon — fixed 48×48, flex-none prevents stretch */}
       <motion.button
         className="relative flex-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded-[12.46px] outline-none overflow-hidden"
-        style={{
-          width: 48,
-          height: 48,
-          flexShrink: 0,
-        }}
+        style={{ width: 48, height: 48, flexShrink: 0 }}
         onHoverStart={() => setHovered(true)}
         onHoverEnd={() => setHovered(false)}
         onTap={handleTap}

@@ -1,10 +1,14 @@
 "use client";
 
 import { memo, useCallback, useRef, useEffect } from "react";
+import Image from "next/image";
 import { motion, useMotionValue, useReducedMotion } from "framer-motion";
 import { useWindowStore } from "@/store/windowStore";
 import { useDesktopStore } from "@/store/desktopStore";
 import { windowId } from "@/lib/utils";
+import { getCachedImageSize, preloadImageDimensions } from "@/lib/imageDimensions";
+import { PROJECT_IMAGES } from "@/data/assets";
+import { useLoadingStore } from "@/store/loadingStore";
 import type { DesktopIconData } from "@/types";
 
 const SELECTION_TRANSITION = { duration: 0.14, ease: "easeOut" };
@@ -18,6 +22,7 @@ function DesktopIconInner({ icon, position }: DesktopIconProps) {
   const prefersReduced = useReducedMotion();
   const { openWindow } = useWindowStore();
   const { selectIcon, selectedIconId, setIconPosition } = useDesktopStore();
+  const { startLoading, stopLoading } = useLoadingStore();
   const isSelected = selectedIconId === icon.id;
 
   const x = useMotionValue(position.x);
@@ -31,14 +36,32 @@ function DesktopIconInner({ icon, position }: DesktopIconProps) {
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didDrag = useRef(false);
 
-  const handleOpenWindow = useCallback(() => {
+  const handleOpenWindow = useCallback(async () => {
+    const isImage = icon.type === "project" || icon.type === "me";
+    let size: { width: number; height: number } | undefined;
+
+    if (isImage && icon.id in PROJECT_IMAGES) {
+      const cached = getCachedImageSize(icon.id);
+      if (cached) {
+        size = cached;
+      } else {
+        startLoading();
+        try {
+          size = await preloadImageDimensions(icon.id, PROJECT_IMAGES[icon.id as keyof typeof PROJECT_IMAGES]);
+        } finally {
+          stopLoading();
+        }
+      }
+    }
+
     openWindow({
       id: windowId(icon.id),
-      type: icon.type,
+      type: isImage ? "image" : icon.type,
       title: icon.label,
-      props: icon.props,
+      props: icon.props ?? { projectId: icon.id },
+      size,
     });
-  }, [icon, openWindow]);
+  }, [icon, openWindow, startLoading, stopLoading]);
 
   const handleClick = useCallback(() => {
     if (didDrag.current) return;
@@ -68,6 +91,7 @@ function DesktopIconInner({ icon, position }: DesktopIconProps) {
   const isFolder = icon.type === "finder";
   const isAbout = icon.type === "about";
   const isPlay = icon.id === "play";
+  const isMe = icon.id === "me";
 
   return (
     <motion.div
@@ -105,16 +129,20 @@ function DesktopIconInner({ icon, position }: DesktopIconProps) {
         />
 
         {isFolder ? (
-          <img src={icon.thumbnailSrc} alt={icon.label} className="w-full h-full object-contain pointer-events-none" draggable={false} />
+          <Image src={icon.thumbnailSrc} alt={icon.label} width={72} height={72} className="object-contain pointer-events-none" draggable={false} />
         ) : isAbout ? (
-          <img src={icon.thumbnailSrc} alt={icon.label} className="w-[52px] h-[52px] object-contain pointer-events-none" draggable={false} />
+          <Image src={icon.thumbnailSrc} alt={icon.label} width={52} height={52} className="object-contain pointer-events-none" draggable={false} />
         ) : isPlay ? (
-          <img src={icon.thumbnailSrc} alt={icon.label} className="w-[72px] h-[72px] object-contain pointer-events-none" draggable={false} />
+          <Image src={icon.thumbnailSrc} alt={icon.label} width={72} height={72} className="object-contain pointer-events-none" draggable={false} />
+        ) : isMe ? (
+          <Image src={icon.thumbnailSrc} alt={icon.label} width={72} height={72} className="object-cover rounded-[4px] pointer-events-none" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.25)" }} draggable={false} />
         ) : (
-          <img
+          <Image
             src={icon.thumbnailSrc}
             alt={icon.label}
-            className="w-[72px] h-[54px] object-cover rounded-[4px] pointer-events-none"
+            width={72}
+            height={54}
+            className="object-cover rounded-[4px] pointer-events-none"
             style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.25)" }}
             draggable={false}
           />

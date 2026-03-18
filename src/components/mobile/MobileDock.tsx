@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { DOCK_ITEMS, DOCK_TRASH } from "@/data/projects";
 
 export default function MobileDock() {
@@ -28,7 +29,7 @@ export default function MobileDock() {
                 onClick={item.onClick}
                 aria-label={item.label}
               >
-                <img src={item.iconSrc} alt={item.label} className="w-full h-full object-contain" draggable={false} />
+                <Image src={item.iconSrc!} alt={item.label} width={48} height={48} className="object-contain" draggable={false} />
               </button>
             </div>
           );

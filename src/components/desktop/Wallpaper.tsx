@@ -1,14 +1,18 @@
 "use client";
 
+import Image from "next/image";
 import { WALLPAPER } from "@/data/assets";
 
 export default function Wallpaper() {
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-      <img
+      <Image
         src={WALLPAPER.background}
         alt=""
-        className="absolute inset-0 w-full h-full object-cover object-[center_25%] pointer-events-none"
+        fill
+        priority
+        unoptimized
+        className="object-cover object-[center_25%] pointer-events-none"
         draggable={false}
       />
     </div>

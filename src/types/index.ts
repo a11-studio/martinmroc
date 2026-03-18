@@ -2,7 +2,7 @@
 // Window system
 // ─────────────────────────────────────────────────────────────────
 
-export type WindowType = "project" | "about" | "finder" | "video" | "me";
+export type WindowType = "project" | "about" | "finder" | "video" | "me" | "image";
 
 export interface WindowInstance {
   id: string;
@@ -12,6 +12,9 @@ export interface WindowInstance {
   size: { width: number; height: number };
   zIndex: number;
   isMinimized: boolean;
+  isMaximized?: boolean;
+  /** Size before maximizing — restored when un-maximizing */
+  sizeBeforeMaximize?: { width: number; height: number };
   props?: {
     projectId?: string;
     src?: string;

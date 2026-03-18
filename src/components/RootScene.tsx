@@ -5,13 +5,15 @@ import { AnimatePresence } from "framer-motion";
 import CursorLoader from "./loading/CursorLoader";
 import Desktop from "./desktop/Desktop";
 import MobileLayout from "./mobile/MobileLayout";
+import { useLoadingStore } from "@/store/loadingStore";
 
 export default function RootScene() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const loadingCount = useLoadingStore((s) => s.count);
 
   useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 800);
+    const t = setTimeout(() => setIsInitialLoad(false), 800);
     return () => clearTimeout(t);
   }, []);
 
@@ -22,18 +24,18 @@ export default function RootScene() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  const showLoader = isInitialLoad || loadingCount > 0;
+
   return (
     <div className="w-full h-full">
-      {/* Desktop mounts underneath during loading */}
       {isMobile ? (
         <MobileLayout key="mobile" />
       ) : (
         <Desktop key="desktop" />
       )}
 
-      {/* Cursor-adjacent loader overlay */}
       <AnimatePresence>
-        {isLoading && <CursorLoader key="loader" />}
+        {showLoader && <CursorLoader key="loader" />}
       </AnimatePresence>
     </div>
   );

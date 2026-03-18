@@ -137,22 +137,24 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
     set((state) => ({
       windows: state.windows.map((w) => {
         if (w.id !== id) return w;
-        const isCurrentlyMaximized =
-          w.size.width >= (typeof window !== "undefined" ? window.innerWidth - 4 : 9999);
+        const isCurrentlyMaximized = w.isMaximized ?? false;
         if (isCurrentlyMaximized) {
-          const defaultSize = DEFAULT_WINDOW_SIZES[w.type] ?? { width: 640, height: 480 };
+          const restoreSize = w.sizeBeforeMaximize ?? DEFAULT_WINDOW_SIZES[w.type] ?? { width: 640, height: 480 };
           return {
             ...w,
-            size: defaultSize,
-            position: getDefaultCenter(defaultSize),
+            isMaximized: false,
+            sizeBeforeMaximize: undefined,
+            size: restoreSize,
+            position: getDefaultCenter(restoreSize),
           };
         }
+        const vpW = typeof window !== "undefined" ? window.innerWidth : 1280;
+        const vpH = typeof window !== "undefined" ? window.innerHeight - 28 : 720;
         return {
           ...w,
-          size: {
-            width: typeof window !== "undefined" ? window.innerWidth : 1280,
-            height: typeof window !== "undefined" ? window.innerHeight - 28 : 720,
-          },
+          isMaximized: true,
+          sizeBeforeMaximize: { width: w.size.width, height: w.size.height },
+          size: { width: vpW, height: vpH },
           position: { x: 0, y: 28 },
         };
       }),

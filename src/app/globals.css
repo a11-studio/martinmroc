@@ -66,6 +66,7 @@
     -webkit-user-drag: none;
     user-select: none;
   }
+
 }
 
 @layer utilities {
@@ -132,5 +133,21 @@
 
   .no-drag {
     -webkit-app-region: no-drag;
+  }
+
+  /* Dock tooltip with arrow (beak) at bottom */
+  .dock-tooltip {
+    position: relative;
+  }
+
+  .dock-tooltip::after {
+    content: "";
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(30, 30, 32, 0.82);
   }
 }

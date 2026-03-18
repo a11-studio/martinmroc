@@ -45,7 +45,7 @@ export default function AboutWindow() {
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-black/[0.06]" />
+      <div className="h-px bg-gray-100" />
 
       {/* Specialties */}
       <div>
@@ -66,7 +66,7 @@ export default function AboutWindow() {
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-black/[0.06]" />
+      <div className="h-px bg-gray-100" />
 
       {/* Design philosophy */}
       <div>
@@ -81,7 +81,7 @@ export default function AboutWindow() {
       </div>
 
       {/* Divider */}
-      <div className="h-px bg-black/[0.06]" />
+      <div className="h-px bg-gray-100" />
 
       {/* Contact */}
       <div>
@@ -98,7 +98,7 @@ export default function AboutWindow() {
               className="flex items-center gap-3 text-[13px] text-[#1c1c1e] hover:text-blue-600 transition-colors duration-150 focus-visible:outline-none focus-visible:text-blue-600 group"
             >
               <span
-                className="w-7 h-7 rounded-[7px] bg-black/[0.05] flex items-center justify-center text-[11px] font-medium shrink-0 group-hover:bg-blue-50 transition-colors duration-150"
+                className="w-7 h-7 rounded-[7px] bg-gray-100 flex items-center justify-center text-[11px] font-medium shrink-0 group-hover:bg-blue-50 transition-colors duration-150"
                 aria-hidden="true"
               >
                 {link.icon}

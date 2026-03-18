@@ -124,6 +124,7 @@ export const DEFAULT_WINDOW_SIZES: Record<
 > = {
   project: { width: 760, height: 540 },
   me: { width: 480, height: 560 },
+  image: { width: 480, height: 360 },
   about: { width: 560, height: 480 },
   finder: { width: 760, height: 500 },
   video: { width: 640, height: 400 },

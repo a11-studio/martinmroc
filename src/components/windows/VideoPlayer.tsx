@@ -1,12 +1,24 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { VIDEO } from "@/data/assets";
+import { useLoadingStore } from "@/store/loadingStore";
 
 export default function VideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const { startLoading, stopLoading } = useLoadingStore();
+
+  useEffect(() => {
+    startLoading();
+    return () => stopLoading();
+  }, [startLoading, stopLoading]);
+
+  const handleLoaded = () => {
+    setIsLoaded(true);
+    stopLoading();
+  };
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -30,7 +42,8 @@ export default function VideoPlayer() {
         controls
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
-        onLoadedMetadata={() => setIsLoaded(true)}
+        onLoadedMetadata={handleLoaded}
+        onCanPlay={handleLoaded}
         aria-label="Portfolio video"
       />
 
