@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
+import { findNextSpatialId, type ArrowDirection } from "@/lib/spatialNavigation";
 import { useWindowStore } from "@/store/windowStore";
 import { useLoadingStore } from "@/store/loadingStore";
 import { ICON_THUMBNAILS, PROJECT_IMAGES } from "@/data/assets";
@@ -22,27 +23,158 @@ const SIDEBAR_FOLDERS = [
   { id: "freehold", label: "Freehold" },
   { id: "thirdweb", label: "Thirdweb" },
   { id: "realitiez", label: "Realitiez" },
+] as const;
+
+type SidebarFolderId = (typeof SIDEBAR_FOLDERS)[number]["id"] | "trash";
+
+const SIDEBAR_ORDER: SidebarFolderId[] = [
+  ...SIDEBAR_FOLDERS.map((f) => f.id),
+  "trash",
 ];
 
 interface FinderWindowProps {
   winId: string;
+  finderInitialFolder?: "all" | "trash";
 }
 
 const SELECTION_TRANSITION = { duration: 0.14, ease: "easeOut" as const };
 
-export default function FinderWindow({ winId }: FinderWindowProps) {
+export default function FinderWindow({ winId, finderInitialFolder }: FinderWindowProps) {
   const prefersReduced = useReducedMotion();
   const { openWindow, closeWindow, minimizeWindow, toggleMaximize } = useWindowStore();
   const { startLoading, stopLoading } = useLoadingStore();
-  const [selectedFolder, setSelectedFolder] = useState("all");
+  const [selectedFolder, setSelectedFolder] = useState<SidebarFolderId>(
+    () => finderInitialFolder ?? "all"
+  );
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finderRootRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef({
+    winId,
+    isMobile,
+    selectedFolder,
+    selectedItemId,
+    visibleCount: 0 as number,
+  });
+
+  useEffect(() => {
+    if (finderInitialFolder === "trash" || finderInitialFolder === "all") {
+      setSelectedFolder(finderInitialFolder);
+    }
+  }, [finderInitialFolder]);
 
   const visibleItems =
-    selectedFolder === "all"
-      ? FINDER_ITEMS
-      : FINDER_ITEMS.filter((item) => item.id === selectedFolder);
+    selectedFolder === "trash"
+      ? []
+      : selectedFolder === "all"
+        ? FINDER_ITEMS
+        : FINDER_ITEMS.filter((item) => item.id === selectedFolder);
+
+  navRef.current = {
+    winId,
+    isMobile,
+    selectedFolder,
+    selectedItemId,
+    visibleCount: visibleItems.length,
+  };
+
+  const visibleIdsKey = visibleItems.map((i) => i.id).join("|");
+
+  useEffect(() => {
+    if (selectedFolder === "trash") {
+      setSelectedItemId(null);
+      return;
+    }
+    setSelectedItemId((prev) => {
+      if (!prev) return null;
+      const ids = visibleIdsKey.length ? visibleIdsKey.split("|") : [];
+      return ids.includes(prev) ? prev : null;
+    });
+  }, [selectedFolder, visibleIdsKey]);
+
+  // Arrow keys: sidebar (desktop) + spatial grid — same pattern as desktop icons
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key;
+      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(key)) return;
+
+      const target = e.target as HTMLElement;
+      if (target.closest("input, textarea, [contenteditable]")) return;
+
+      const { windows } = useWindowStore.getState();
+      const top = [...windows]
+        .filter((w) => !w.isMinimized)
+        .sort((a, b) => b.zIndex - a.zIndex)[0];
+
+      const { winId: id, isMobile: mobile, selectedFolder: folder, selectedItemId: itemId, visibleCount } =
+        navRef.current;
+
+      if (!top || top.type !== "finder" || top.id !== id) return;
+
+      const root = finderRootRef.current;
+      if (!root) return;
+
+      // Another window / sheet has focus — don’t drive this Finder
+      if (target.closest('[role="dialog"]') && !root.contains(target)) return;
+
+      const actuallyPreferGrid = visibleCount > 0;
+      const inSidebar = !mobile && !!target.closest("[data-finder-sidebar]");
+      const sidebarNav = !mobile && (inSidebar || !actuallyPreferGrid);
+
+      const focusSidebarEntry = (sid: SidebarFolderId) => {
+        requestAnimationFrame(() => {
+          root.querySelector<HTMLElement>(`[data-finder-sidebar-id="${sid}"]`)?.focus();
+        });
+      };
+
+      const focusItem = (itemKey: string) => {
+        requestAnimationFrame(() => {
+          root.querySelector<HTMLElement>(`[data-finder-item-id="${itemKey}"]`)?.focus();
+        });
+      };
+
+      if (sidebarNav) {
+        if (key !== "ArrowUp" && key !== "ArrowDown") return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const order = SIDEBAR_ORDER;
+        const i = order.indexOf(folder);
+        if (i < 0) return;
+        const delta = key === "ArrowDown" ? 1 : -1;
+        const ni = Math.max(0, Math.min(order.length - 1, i + delta));
+        if (ni !== i) {
+          setSelectedFolder(order[ni]);
+          setSelectedItemId(null);
+          focusSidebarEntry(order[ni]);
+        }
+        return;
+      }
+
+      if (!actuallyPreferGrid) return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      const nodes = root.querySelectorAll<HTMLElement>("[data-finder-item-id]");
+      if (!nodes.length) return;
+
+      const items = [...nodes].map((el) => {
+        const fid = el.getAttribute("data-finder-item-id")!;
+        const r = el.getBoundingClientRect();
+        return { id: fid, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+      });
+
+      const nextId = findNextSpatialId(key as ArrowDirection, items, itemId, 115);
+      if (nextId) {
+        setSelectedItemId(nextId);
+        focusItem(nextId);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [winId]);
 
   const openImageWindow = useCallback(
     async (item: (typeof FINDER_ITEMS)[0]) => {
@@ -92,18 +224,26 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
   );
 
   const selectedLabel =
-    selectedFolder === "all"
-      ? "Projects"
-      : SIDEBAR_FOLDERS.find((f) => f.id === selectedFolder)?.label ?? "Projects";
+    selectedFolder === "trash"
+      ? "Trash"
+      : selectedFolder === "all"
+        ? "Projects"
+        : SIDEBAR_FOLDERS.find((f) => f.id === selectedFolder)?.label ?? "Projects";
 
   return (
-    <div className="flex h-full w-full overflow-hidden" style={{ borderRadius: 26 }}>
+    <div
+      ref={finderRootRef}
+      data-finder-window
+      className="flex h-full w-full overflow-hidden outline-none"
+      style={{ borderRadius: 26 }}
+      tabIndex={-1}
+    >
       {/* ── Sidebar: hidden on mobile ── */}
       {!isMobile && <div
         className="relative w-[240px] shrink-0 h-full overflow-hidden"
         style={{ borderRadius: "26px 0 0 26px", isolation: "isolate" }}
       >
-        {/* Frosted glass base — no blend modes to avoid light layer on click */}
+        {/* Frosted glass base — will-change + translateZ force GPU layer from frame 1 to avoid flicker */}
         <div
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none"
@@ -112,6 +252,8 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
             WebkitBackdropFilter: "blur(40px)",
             background: "rgba(245,245,245,0.75)",
             borderRadius: "26px 0 0 26px",
+            willChange: "backdrop-filter",
+            transform: "translateZ(0)",
           }}
         />
         {/* Right-edge divider */}
@@ -137,12 +279,15 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
             />
           </div>
 
-          {/* Folder list */}
+          {/* Folder list + trash (arrow-key navigable) */}
+          <div data-finder-sidebar className="flex flex-col min-h-0">
           {SIDEBAR_FOLDERS.map((folder) => {
             const isSelected = selectedFolder === folder.id;
             return (
               <button
                 key={folder.id}
+                type="button"
+                data-finder-sidebar-id={folder.id}
                 className="flex items-center gap-[5px] h-[24px] px-[6px] mx-[10px] rounded-[5px] text-left focus-visible:outline-none transition-colors"
                 style={{
                   background: isSelected ? "rgba(0,0,0,0.11)" : "transparent",
@@ -182,11 +327,27 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
             );
           })}
 
-          {/* Section header */}
+          {/* Trash — same slot as former RECENT */}
           <div className="px-[18px] pt-[14px] pb-[4px] shrink-0">
             <span className="text-[11px] font-bold tracking-wide" style={{ color: "rgba(0,0,0,0.45)" }}>
-              RECENT
+              TRASH
             </span>
+          </div>
+          <button
+            type="button"
+            data-finder-sidebar-id="trash"
+            className="flex items-center gap-[5px] h-[24px] px-[6px] mx-[10px] rounded-[5px] text-left focus-visible:outline-none transition-colors"
+            style={{
+              background: selectedFolder === "trash" ? "rgba(0,0,0,0.11)" : "transparent",
+            }}
+            onClick={() => setSelectedFolder("trash")}
+            aria-current={selectedFolder === "trash" ? "true" : undefined}
+          >
+            <TrashSidebarIcon selected={selectedFolder === "trash"} />
+            <span className="text-[11px] font-medium truncate" style={{ color: "rgba(0,0,0,0.85)" }}>
+              Trash
+            </span>
+          </button>
           </div>
         </div>
       </div>}
@@ -242,6 +403,13 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
           className="flex-1 overflow-y-auto p-[20px] cursor-default"
           onClick={() => setSelectedItemId(null)}
         >
+          {selectedFolder === "trash" ? (
+            <div className="flex flex-col items-center justify-center min-h-[120px] pt-[8px]">
+              <p className="text-[13px] font-medium" style={{ color: "rgba(0,0,0,0.45)" }}>
+                Trash is empty.
+              </p>
+            </div>
+          ) : (
           <div className="flex flex-wrap gap-[20px]">
             {visibleItems.map((item) => {
               const isSelected = selectedItemId === item.id;
@@ -250,6 +418,7 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
                   key={item.id}
                   role="button"
                   tabIndex={0}
+                  data-finder-item-id={item.id}
                   aria-label={`Open ${item.label}`}
                   aria-selected={isSelected}
                   className="flex flex-col items-center gap-[6px] p-[8px] rounded-[8px] cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
@@ -265,8 +434,11 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
                     }
                   }}
                 >
-                  {/* Thumbnail — same format as desktop: 72×54, object-contain, no crop */}
-                  <div className="relative flex items-center justify-center rounded-[4px]" style={{ width: 72, height: 54 }}>
+                  {/* Thumbnail — 4:3 (72×54), object-cover — same crop as desktop project icons */}
+                  <div
+                    className="relative flex items-center justify-center rounded-[4px] overflow-hidden"
+                    style={{ width: 72, height: 54 }}
+                  >
                     <div
                       className="absolute inset-0 rounded-[4px] pointer-events-none"
                       style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
@@ -276,7 +448,7 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
                       alt={item.label}
                       width={72}
                       height={54}
-                      className="relative object-contain pointer-events-none rounded-[4px]"
+                      className="relative h-full w-full object-cover pointer-events-none"
                       draggable={false}
                     />
                     <motion.div
@@ -312,9 +484,31 @@ export default function FinderWindow({ winId }: FinderWindowProps) {
               );
             })}
           </div>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function TrashSidebarIcon({ selected }: { selected: boolean }) {
+  const stroke = selected ? "#007aff" : "rgba(0,0,0,0.55)";
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0" aria-hidden="true">
+      <path
+        d="M6 2h4l1 1.5H14v1H2v-1h3L6 2zM4 6v7a2 2 0 002 2h4a2 2 0 002-2V6H4z"
+        stroke={stroke}
+        strokeWidth="1"
+        fill={selected ? "rgba(0,122,255,0.12)" : "none"}
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.5 8.5v4M9.5 8.5v4"
+        stroke={selected ? "#007aff" : "rgba(0,0,0,0.4)"}
+        strokeWidth="0.9"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

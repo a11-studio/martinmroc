@@ -84,11 +84,20 @@ export default function MobileLayout() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + i * 0.06, type: "spring", stiffness: 340, damping: 28 }}
               onClick={() =>
-                openWindow({
-                  id: windowId(icon.id),
-                  type: icon.type,
-                  title: icon.label,
-                })
+                openWindow(
+                  icon.type === "finder"
+                    ? {
+                        id: windowId("projects"),
+                        type: "finder",
+                        title: "Projects",
+                        props: { finderInitialFolder: "all" },
+                      }
+                    : {
+                        id: windowId(icon.id),
+                        type: icon.type,
+                        title: icon.label,
+                      }
+                )
               }
               aria-label={`Open ${icon.label}`}
             >

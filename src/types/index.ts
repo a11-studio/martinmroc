@@ -2,7 +2,14 @@
 // Window system
 // ─────────────────────────────────────────────────────────────────
 
-export type WindowType = "project" | "about" | "finder" | "video" | "me" | "image";
+export type WindowType =
+  | "project"
+  | "about"
+  | "finder"
+  | "video"
+  | "me"
+  | "image"
+  | "spotify";
 
 export interface WindowInstance {
   id: string;
@@ -18,6 +25,8 @@ export interface WindowInstance {
   props?: {
     projectId?: string;
     src?: string;
+    /** Finder: which sidebar view to show when opening / refocusing */
+    finderInitialFolder?: "all" | "trash";
   };
 }
 

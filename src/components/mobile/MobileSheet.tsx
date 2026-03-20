@@ -8,6 +8,7 @@ import VideoPlayer from "@/components/windows/VideoPlayer";
 import MeWindow from "@/components/windows/MeWindow";
 import ImageWindow from "@/components/windows/ImageWindow";
 import FinderWindow from "@/components/windows/FinderWindow";
+import SpotifyPlaylistWindow from "@/components/windows/SpotifyPlaylistWindow";
 
 export default function MobileSheet() {
   const { windows, closeWindow } = useWindowStore();
@@ -63,7 +64,13 @@ export default function MobileSheet() {
                 {topWindow.type === "video" && <VideoPlayer />}
                 {topWindow.type === "me" && <ImageWindow winId={topWindow.id} projectId="me" />}
                 {topWindow.type === "image" && <ImageWindow winId={topWindow.id} projectId={topWindow.props?.projectId} />}
-                {topWindow.type === "finder" && <FinderWindow winId={topWindow.id} />}
+                {topWindow.type === "finder" && (
+                  <FinderWindow
+                    winId={topWindow.id}
+                    finderInitialFolder={topWindow.props?.finderInitialFolder}
+                  />
+                )}
+                {topWindow.type === "spotify" && <SpotifyPlaylistWindow />}
               </div>
             </div>
           </motion.div>

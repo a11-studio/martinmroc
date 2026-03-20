@@ -1,12 +1,24 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import DockItem from "./DockItem";
+import DockMinimizedTile from "./DockMinimizedTile";
 import { DOCK_ITEMS, DOCK_TRASH } from "@/data/projects";
 import { useWindowStore } from "@/store/windowStore";
 
 export default function Dock() {
   const isAnyMaximized = useWindowStore((s) => s.windows.some((w) => w.isMaximized));
+  const windows = useWindowStore((s) => s.windows);
+  const restoreWindow = useWindowStore((s) => s.restoreWindow);
+
+  const minimizedWindows = useMemo(
+    () =>
+      [...windows]
+        .filter((w) => w.isMinimized)
+        .sort((a, b) => a.zIndex - b.zIndex),
+    [windows]
+  );
 
   return (
     // Static wrapper keeps centering — motion.div handles y + opacity only
@@ -19,20 +31,22 @@ export default function Dock() {
         role="toolbar"
         aria-label="Dock"
       >
-        <div
-          className="glass-dock relative flex items-center justify-center gap-[13.065px] px-[11.613px] py-[14.516px]"
-          style={{ borderRadius: "21.8px" }}
-        >
+        <div className="glass-dock relative flex items-center justify-center gap-[13.065px] px-[11.613px] py-[14.516px] rounded-[21.8px] max-[1199px]:gap-[10px] max-[1199px]:px-[9.5px] max-[1199px]:py-[12px] max-[1199px]:rounded-[19px]">
           {DOCK_ITEMS.map((item) => (
             <DockItem key={item.id} item={item} />
           ))}
 
           <div
-            className="h-12 w-[1.45px] mx-[5px] self-center shrink-0"
+            className="h-12 max-[1199px]:h-[42px] w-[1.45px] mx-[5px] max-[1199px]:mx-1 self-center shrink-0"
             style={{ background: "rgba(60,60,67,0.29)" }}
             role="separator"
             aria-hidden="true"
           />
+
+          {/* Minimized windows — priamo vedľa koša (bez ďalšieho oddeľovača) */}
+          {minimizedWindows.map((win) => (
+            <DockMinimizedTile key={win.id} window={win} onRestore={() => restoreWindow(win.id)} />
+          ))}
 
           <DockItem item={DOCK_TRASH} />
         </div>

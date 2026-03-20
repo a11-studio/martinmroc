@@ -9,6 +9,7 @@ import AboutWindow from "./AboutWindow";
 import FinderWindow from "./FinderWindow";
 import VideoPlayer from "./VideoPlayer";
 import MeWindow from "./MeWindow";
+import SpotifyPlaylistWindow from "./SpotifyPlaylistWindow";
 
 function WindowContent({
   winId,
@@ -17,7 +18,7 @@ function WindowContent({
 }: {
   winId: string;
   type: string;
-  props?: { projectId?: string; src?: string };
+  props?: { projectId?: string; src?: string; finderInitialFolder?: "all" | "trash" };
 }) {
   switch (type) {
     case "project":
@@ -27,11 +28,15 @@ function WindowContent({
     case "about":
       return <AboutWindow />;
     case "finder":
-      return <FinderWindow winId={winId} />;
+      return (
+        <FinderWindow winId={winId} finderInitialFolder={props?.finderInitialFolder} />
+      );
     case "video":
       return <VideoPlayer />;
     case "me":
       return <MeWindow />;
+    case "spotify":
+      return <SpotifyPlaylistWindow />;
     default:
       return null;
   }

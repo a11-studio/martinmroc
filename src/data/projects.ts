@@ -1,5 +1,7 @@
 import type { DesktopIconData, ProjectData, DockItemData } from "@/types";
-import { ICON_THUMBNAILS, DOCK_ICONS } from "./assets";
+import { MAILTO_COLLABORATION_HREF } from "@/lib/mailto";
+import { getWhatsAppChatHref } from "@/lib/whatsapp";
+import { DOCK_ICONS, ICON_THUMBNAILS } from "./assets";
 
 // ─────────────────────────────────────────────────────────────────
 // Project metadata
@@ -100,6 +102,7 @@ export const DESKTOP_ICONS: DesktopIconData[] = [
     type: "finder",
     thumbnailSrc: ICON_THUMBNAILS.folder,
     defaultPosition: { x: 48.5, y: 47.2 },
+    props: { finderInitialFolder: "all" },
   },
   {
     id: "about",
@@ -128,6 +131,7 @@ export const DEFAULT_WINDOW_SIZES: Record<
   about: { width: 560, height: 480 },
   finder: { width: 760, height: 500 },
   video: { width: 340, height: 640 },
+  spotify: { width: 440, height: 460 },
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -165,7 +169,7 @@ export const DOCK_ITEMS: DockItemData[] = [
     render: "single",
     iconSrc: DOCK_ICONS.mail,
     onClick: () => {
-      window.location.href = "mailto:hello@example.com";
+      window.location.href = MAILTO_COLLABORATION_HREF;
     },
   },
   {
@@ -173,6 +177,9 @@ export const DOCK_ITEMS: DockItemData[] = [
     label: "WhatsApp",
     render: "single",
     iconSrc: DOCK_ICONS.whatsapp,
+    onClick: () => {
+      window.open(getWhatsAppChatHref(), "_blank", "noopener,noreferrer");
+    },
   },
   {
     id: "spotify",

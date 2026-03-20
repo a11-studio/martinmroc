@@ -42,12 +42,19 @@ export default function Window({ window: win, children }: WindowProps) {
   const vpW = typeof window !== "undefined" ? window.innerWidth : 1280;
   const vpH = typeof window !== "undefined" ? window.innerHeight : 800;
 
+  // Reveal overlay: fades out to expose content. Kept separate from the main container
+  // so the blur/backdrop-filter layer is never inside an opacity-animated ancestor,
+  // which causes compositor delay and visible flicker on open.
+  const revealOverlayColor = isFinderWindow ? "rgba(250,250,250,1)" : "rgba(255,255,255,1)";
+
   return (
     <motion.div
       key={win.id}
       // CSS-based fullscreen: always absolute inside the desktop canvas (w-full h-full).
       // When maximized, animate to top:0/left:0/vpW×vpH which fills the viewport.
       // No position:fixed needed — avoids the 1-frame top:28px flash.
+      // NOTE: We do NOT animate opacity on open — the blur layer must stay at opacity:1
+      // from frame 1. Use the reveal overlay below for the fade-in effect.
       className="absolute overflow-hidden select-none"
       style={{
         zIndex: isFS ? 9000 : win.zIndex,
@@ -56,7 +63,7 @@ export default function Window({ window: win, children }: WindowProps) {
       initial={
         prefersReduced
           ? { opacity: 0, left: win.position.x, top: win.position.y, width: win.size.width, height: win.size.height, borderRadius: 26 }
-          : { opacity: 0, scale: 0.88, y: 16, left: win.position.x, top: win.position.y, width: win.size.width, height: win.size.height, borderRadius: 26 }
+          : { opacity: 1, scale: 0.88, y: 16, left: win.position.x, top: win.position.y, width: win.size.width, height: win.size.height, borderRadius: 26 }
       }
       animate={
         win.isMinimized
@@ -100,12 +107,25 @@ export default function Window({ window: win, children }: WindowProps) {
       aria-label={win.title}
       aria-modal="true"
     >
+      {/* Reveal overlay: fades from opaque to transparent. Blur layer stays at opacity:1. */}
+      {!prefersReduced && (
+        <motion.div
+          className="absolute inset-0 z-[100] pointer-events-none"
+          style={{
+            background: revealOverlayColor,
+            borderRadius: "inherit",
+          }}
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          transition={springConfig}
+        />
+      )}
       {isFinderWindow ? (
         <div className="w-full h-full">{children}</div>
       ) : (
         <div className="w-full h-full flex flex-col bg-white">
           <div
-            className="window-drag-area flex items-center gap-2 px-[14px] h-[38px] shrink-0"
+            className="window-drag-area flex items-center gap-2 px-[14px] min-h-[40px] py-1.5 shrink-0"
             style={{
               cursor: isFS ? "default" : "default",
               background: "rgba(246,246,246,0.95)",
@@ -127,7 +147,8 @@ export default function Window({ window: win, children }: WindowProps) {
                 />
               ))}
             </div>
-            <span className="flex-1 text-center text-[13px] font-semibold text-[rgba(0,0,0,0.8)] leading-none truncate pr-[54px]">
+            {/* leading-snug — leading-none clipped descenders (j, g, p) in the title */}
+            <span className="flex-1 text-center text-[13px] font-semibold text-[rgba(0,0,0,0.8)] leading-snug truncate pr-[54px]">
               {win.title}
             </span>
           </div>

@@ -4,15 +4,23 @@ import { useEffect, useCallback, useRef } from "react";
 import { useDesktopStore } from "@/store/desktopStore";
 import { DESKTOP_ICONS } from "@/data/projects";
 import { PROJECT_IMAGES } from "@/data/assets";
+import { findNextSpatialId } from "@/lib/spatialNavigation";
 import { preloadImageDimensions } from "@/lib/imageDimensions";
+import { useWindowStore } from "@/store/windowStore";
+import { COMPACT_DESKTOP_MAX_WIDTH_PX, useIsCompactDesktop } from "@/hooks/useIsCompactDesktop";
 import Wallpaper from "./Wallpaper";
 import DesktopIcon from "./DesktopIcon";
 import Dock from "@/components/dock/Dock";
 import ContextMenu from "@/components/context-menu/ContextMenu";
 import WindowManager from "@/components/windows/WindowManager";
 
-const ICON_W = 88;
-const ICON_H = 96;
+/** Zarovnané s vizuálnou výškou bloku ikony (thumbnail + medzera + label) — šípky / spatial nav */
+const ICON_METRICS = {
+  normal: { ICON_W: 88, ICON_H: 96 },
+  compact: { ICON_W: 76, ICON_H: 84 },
+} as const;
+
+type IconMetrics = (typeof ICON_METRICS)[keyof typeof ICON_METRICS];
 
 /** Fallback position when store is empty (bfcache restore, tab return) */
 function getDefaultPosition(icon: (typeof DESKTOP_ICONS)[0]) {
@@ -23,82 +31,26 @@ function getDefaultPosition(icon: (typeof DESKTOP_ICONS)[0]) {
   };
 }
 
-/** Find icon ID to navigate to based on arrow key and current position */
-function findNextIcon(
-  direction: "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown",
-  positions: Record<string, { x: number; y: number }>,
-  currentId: string | null
-): string | null {
-  const icons = DESKTOP_ICONS.map((icon) => ({
-    id: icon.id,
-    cx: (positions[icon.id]?.x ?? 0) + ICON_W / 2,
-    cy: (positions[icon.id]?.y ?? 0) + ICON_H / 2,
-  }));
-
-  if (icons.length === 0) return null;
-
-  let current = currentId
-    ? icons.find((i) => i.id === currentId)
-    : null;
-
-  if (!current) {
-    // Nothing selected: pick top-left by default
-    const sorted = [...icons].sort((a, b) => {
-      const rowA = Math.round(a.cy / 120);
-      const rowB = Math.round(b.cy / 120);
-      if (rowA !== rowB) return rowA - rowB;
-      return a.cx - b.cx;
-    });
-    return sorted[0]?.id ?? null;
-  }
-
-  const candidates = icons.filter((i) => i.id !== current.id);
-
-  if (direction === "ArrowRight") {
-    const toRight = candidates.filter((i) => i.cx > current!.cx);
-    if (toRight.length === 0) return null;
-    return toRight.sort((a, b) => {
-      const dyA = Math.abs(a.cy - current!.cy);
-      const dyB = Math.abs(b.cy - current!.cy);
-      if (dyA !== dyB) return dyA - dyB;
-      return a.cx - b.cx;
-    })[0]?.id ?? null;
-  }
-  if (direction === "ArrowLeft") {
-    const toLeft = candidates.filter((i) => i.cx < current!.cx);
-    if (toLeft.length === 0) return null;
-    return toLeft.sort((a, b) => {
-      const dyA = Math.abs(a.cy - current!.cy);
-      const dyB = Math.abs(b.cy - current!.cy);
-      if (dyA !== dyB) return dyA - dyB;
-      return b.cx - a.cx;
-    })[0]?.id ?? null;
-  }
-  if (direction === "ArrowDown") {
-    const below = candidates.filter((i) => i.cy > current!.cy);
-    if (below.length === 0) return null;
-    return below.sort((a, b) => {
-      const dxA = Math.abs(a.cx - current!.cx);
-      const dxB = Math.abs(b.cx - current!.cx);
-      if (dxA !== dxB) return dxA - dxB;
-      return a.cy - b.cy;
-    })[0]?.id ?? null;
-  }
-  if (direction === "ArrowUp") {
-    const above = candidates.filter((i) => i.cy < current!.cy);
-    if (above.length === 0) return null;
-    return above.sort((a, b) => {
-      const dxA = Math.abs(a.cx - current!.cx);
-      const dxB = Math.abs(b.cx - current!.cx);
-      if (dxA !== dxB) return dxA - dxB;
-      return b.cy - a.cy;
-    })[0]?.id ?? null;
-  }
-  return null;
-}
-
 export default function Desktop() {
   const desktopRef = useRef<HTMLDivElement>(null);
+  const isCompactDesktop = useIsCompactDesktop();
+  const iconMetricsRef = useRef<IconMetrics>(ICON_METRICS.normal);
+
+  useEffect(() => {
+    const update = () => {
+      iconMetricsRef.current =
+        window.innerWidth <= COMPACT_DESKTOP_MAX_WIDTH_PX ? ICON_METRICS.compact : ICON_METRICS.normal;
+    };
+    update();
+    window.addEventListener("resize", update);
+    const mq = window.matchMedia(`(max-width: ${COMPACT_DESKTOP_MAX_WIDTH_PX}px)`);
+    mq.addEventListener("change", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      mq.removeEventListener("change", update);
+    };
+  }, []);
+
   const {
     iconPositions,
     selectedIconId,
@@ -114,9 +66,17 @@ export default function Desktop() {
       const key = e.key as "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown";
       if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(key)) return;
 
-      // Don't steal keys when inside a window, context menu, or input/textarea
       const target = e.target as HTMLElement;
-      if (target.closest('[role="dialog"]') || target.closest('[role="menu"]') || target.closest("input, textarea, [contenteditable]")) return;
+      if (target.closest('[role="menu"]') || target.closest("input, textarea, [contenteditable]")) return;
+
+      // Finder window handles its own arrows; leave keys to it when open
+      const top = [...useWindowStore.getState().windows]
+        .filter((w) => !w.isMinimized)
+        .sort((a, b) => b.zIndex - a.zIndex)[0];
+      if (top?.type === "finder" || top?.type === "spotify") return;
+
+      // Don't steal keys when inside another dialog
+      if (target.closest('[role="dialog"]')) return;
 
       // Only handle when focus is on desktop (not inside a window)
       if (!desktopRef.current?.contains(target) || target.closest('[role="dialog"]')) return;
@@ -130,7 +90,14 @@ export default function Desktop() {
         }
       });
 
-      const nextId = findNextIcon(key, positions, selectedIconId);
+      const { ICON_W, ICON_H } = iconMetricsRef.current;
+      const icons = DESKTOP_ICONS.map((icon) => ({
+        id: icon.id,
+        cx: (positions[icon.id]?.x ?? 0) + ICON_W / 2,
+        cy: (positions[icon.id]?.y ?? 0) + ICON_H / 2,
+      }));
+
+      const nextId = findNextSpatialId(key, icons, selectedIconId, 120);
       if (nextId) {
         selectIcon(nextId);
         const el = document.querySelector(`[data-icon-id="${nextId}"]`) as HTMLElement | null;
@@ -224,6 +191,7 @@ export default function Desktop() {
               key={icon.id}
               icon={icon}
               position={position}
+              compact={isCompactDesktop}
             />
           );
         })}

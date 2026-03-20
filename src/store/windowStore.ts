@@ -41,14 +41,22 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
   openWindow: ({ id, type, title, props, position, size }) => {
     const { windows, maxZIndex } = get();
 
-    // If already open, focus it instead of duplicating
+    // If already open, focus it instead of duplicating (merge props e.g. Finder view)
     const existing = windows.find((w) => w.id === id);
     if (existing) {
       set({
         maxZIndex: maxZIndex + 1,
         windows: windows.map((w) =>
           w.id === id
-            ? { ...w, zIndex: maxZIndex + 1, isMinimized: false }
+            ? {
+                ...w,
+                zIndex: maxZIndex + 1,
+                isMinimized: false,
+                props:
+                  props !== undefined
+                    ? { ...w.props, ...props }
+                    : w.props,
+              }
             : w
         ),
       });
