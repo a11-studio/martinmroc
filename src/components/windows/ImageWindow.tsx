@@ -10,16 +10,18 @@ import { useLoadingStore } from "@/store/loadingStore";
 interface ImageWindowProps {
   winId: string;
   projectId?: string;
+  src?: string;
 }
 
-export default function ImageWindow({ projectId }: ImageWindowProps) {
+export default function ImageWindow({ projectId, src: srcProp }: ImageWindowProps) {
   const { startLoading, stopLoading } = useLoadingStore();
   const [isLoaded, setIsLoaded] = useState(false);
 
   const imageSrc =
-    projectId && projectId in PROJECT_IMAGES
+    srcProp ??
+    (projectId && projectId in PROJECT_IMAGES
       ? PROJECT_IMAGES[projectId as keyof typeof PROJECT_IMAGES]
-      : null;
+      : null);
 
   const thumbnailSrc =
     projectId && projectId in ICON_THUMBNAILS

@@ -10,19 +10,90 @@ import { ICON_THUMBNAILS, PROJECT_IMAGES } from "@/data/assets";
 import { getCachedImageSize, preloadImageDimensions } from "@/lib/imageDimensions";
 import { windowId } from "@/lib/utils";
 
-const FINDER_ITEMS = [
-  { id: "cardinal", label: "Cardinal.jpg", thumb: ICON_THUMBNAILS.cardinal },
-  { id: "freehold", label: "Freehold.jpg", thumb: ICON_THUMBNAILS.freehold },
-  { id: "thirdweb", label: "Thirdweb.jpg", thumb: ICON_THUMBNAILS.thirdweb },
-  { id: "realitiez", label: "Realitiez.jpg", thumb: ICON_THUMBNAILS.realitiez },
+interface FinderItem {
+  id: string;
+  label: string;
+  thumb: string;
+  src: string;
+  project: string;
+}
+
+const p = (folder: string, file: string) =>
+  `/images/projects/${folder}/${file}`;
+
+const FINDER_ITEMS: FinderItem[] = [
+  // Cardinal
+  { id: "cardinal",          label: "Cardinal",          thumb: ICON_THUMBNAILS.cardinal,  src: PROJECT_IMAGES.cardinal,  project: "cardinal"  },
+  // Freehold
+  { id: "freehold-ad-01",    label: "Ad Mockup 01",      thumb: p("Freehold","Digital-Screen-Advertising-Mockup-01.jpg"),  src: p("Freehold","Digital-Screen-Advertising-Mockup-01.jpg"),  project: "freehold" },
+  { id: "freehold-ad-14",    label: "Ad Mockup 14",      thumb: p("Freehold","Digital-Screen-Advertising-Mockup-14.jpg"),  src: p("Freehold","Digital-Screen-Advertising-Mockup-14.jpg"),  project: "freehold" },
+  { id: "freehold-frame",    label: "Frame",             thumb: p("Freehold","Frame 1321325961.png"),                      src: p("Freehold","Frame 1321325961.png"),                       project: "freehold" },
+  { id: "freehold-iphone",   label: "iPhone Mockup",     thumb: p("Freehold","iPhone-16-Pro-Mockup-Dusk-Series-04.jpg"),   src: p("Freehold","iPhone-16-Pro-Mockup-Dusk-Series-04.jpg"),   project: "freehold" },
+  // Thirdweb
+  { id: "thirdweb",          label: "Thirdweb",          thumb: ICON_THUMBNAILS.thirdweb,  src: PROJECT_IMAGES.thirdweb,  project: "thirdweb"  },
+  // Realitiez
+  { id: "realitiez",         label: "Realitiez",         thumb: ICON_THUMBNAILS.realitiez, src: PROJECT_IMAGES.realitiez, project: "realitiez" },
+  // Districts
+  { id: "districts-main",    label: "Districts",         thumb: p("Districts","Districts-martinmroc.png"), src: p("Districts","Districts-martinmroc.png"), project: "districts" },
+  { id: "districts-shot18",  label: "Shot 18",           thumb: p("Districts","Shot 18.jpg"),              src: p("Districts","Shot 18.jpg"),             project: "districts" },
+  { id: "districts-shot19",  label: "Shot 19",           thumb: p("Districts","Shot 19.png"),              src: p("Districts","Shot 19.png"),             project: "districts" },
+  { id: "districts-shot20",  label: "Shot 20",           thumb: p("Districts","Shot 20.png"),              src: p("Districts","Shot 20.png"),             project: "districts" },
+  { id: "districts-slide02", label: "Slide 02",          thumb: p("Districts","Slide 16_9 - 02.png"),      src: p("Districts","Slide 16_9 - 02.png"),     project: "districts" },
+  { id: "districts-slide04", label: "Slide 04",          thumb: p("Districts","Slide 16_9 - 04.png"),      src: p("Districts","Slide 16_9 - 04.png"),     project: "districts" },
+  { id: "districts-slide06", label: "Slide 06",          thumb: p("Districts","Slide 16_9 - 06.png"),      src: p("Districts","Slide 16_9 - 06.png"),     project: "districts" },
+  { id: "districts-intro",   label: "Intro",             thumb: p("Districts","intro.gif"),                src: p("Districts","intro.gif"),               project: "districts" },
+  // PiggyBank
+  { id: "piggybank-s1",      label: "Screen 1",          thumb: p("PiggyBank","Screen1.png"),   src: p("PiggyBank","Screen1.png"),   project: "piggybank" },
+  { id: "piggybank-s2",      label: "Screen 2",          thumb: p("PiggyBank","Screen2.png"),   src: p("PiggyBank","Screen2.png"),   project: "piggybank" },
+  { id: "piggybank-s3",      label: "Screen 3",          thumb: p("PiggyBank","Screen3.png"),   src: p("PiggyBank","Screen3.png"),   project: "piggybank" },
+  { id: "piggybank-s1-1",    label: "Screen 1-1",        thumb: p("PiggyBank","Screen1-1.png"), src: p("PiggyBank","Screen1-1.png"), project: "piggybank" },
+  { id: "piggybank-s1-2",    label: "Screen 1-2",        thumb: p("PiggyBank","Screen1-2.png"), src: p("PiggyBank","Screen1-2.png"), project: "piggybank" },
+  { id: "piggybank-s2-1",    label: "Screen 2-1",        thumb: p("PiggyBank","Screen2-1.png"), src: p("PiggyBank","Screen2-1.png"), project: "piggybank" },
+  { id: "piggybank-s3-1",    label: "Screen 3-1",        thumb: p("PiggyBank","Screen3-1.png"), src: p("PiggyBank","Screen3-1.png"), project: "piggybank" },
+  { id: "piggybank-world",   label: "World",             thumb: p("PiggyBank","world.png"),     src: p("PiggyBank","world.png"),     project: "piggybank" },
+  { id: "piggybank-world2",  label: "World 2",           thumb: p("PiggyBank","world2.png"),    src: p("PiggyBank","world2.png"),    project: "piggybank" },
+  // Silencio
+  { id: "silencio-m1",       label: "Mockup 1",          thumb: p("Silencio","4-iPhone-Mockup2.jpg"),                                         src: p("Silencio","4-iPhone-Mockup2.jpg"),                                         project: "silencio" },
+  { id: "silencio-m2",       label: "Mockup 2",          thumb: p("Silencio","Iphone.407.jpg"),                                               src: p("Silencio","Iphone.407.jpg"),                                               project: "silencio" },
+  { id: "silencio-m3",       label: "Mockup 3",          thumb: p("Silencio","MockupE06_Device_DARK_TEXTURED_Lumatte2.jpg"),                   src: p("Silencio","MockupE06_Device_DARK_TEXTURED_Lumatte2.jpg"),                   project: "silencio" },
+  { id: "silencio-m4",       label: "Mockup 4",          thumb: p("Silencio","MockupE08_Conference_Screen_Lumatte.jpg"),                       src: p("Silencio","MockupE08_Conference_Screen_Lumatte.jpg"),                       project: "silencio" },
+  { id: "silencio-m5",       label: "Mockup 5",          thumb: p("Silencio","iPhone-16-Pro-Mockup-Dusk-Series-03.jpg"),                       src: p("Silencio","iPhone-16-Pro-Mockup-Dusk-Series-03.jpg"),                       project: "silencio" },
+  { id: "silencio-m6",       label: "Mockup 6",          thumb: p("Silencio","iPhone-16-Pro-mockup-in-hand-with-backlight-v2-front-view2.png"), src: p("Silencio","iPhone-16-Pro-mockup-in-hand-with-backlight-v2-front-view2.png"), project: "silencio" },
+  { id: "silencio-m7",       label: "Mockup 7",          thumb: p("Silencio","iPhone-16-Pro-mockup-sandwiched-between-rubber-balls-front-view2.png"), src: p("Silencio","iPhone-16-Pro-mockup-sandwiched-between-rubber-balls-front-view2.png"), project: "silencio" },
+  // Trackee
+  { id: "trackee-frame",     label: "Frame",             thumb: p("Trackee","Frame.jpg"),        src: p("Trackee","Frame.jpg"),        project: "trackee" },
+  { id: "trackee-screen",    label: "Screen",            thumb: p("Trackee","Screen01.jpg"),     src: p("Trackee","Screen01.jpg"),     project: "trackee" },
+  { id: "trackee-f1",        label: "Frame 1",           thumb: p("Trackee","Frame 91867.png"),  src: p("Trackee","Frame 91867.png"),  project: "trackee" },
+  { id: "trackee-f2",        label: "Frame 2",           thumb: p("Trackee","Frame 91868.png"),  src: p("Trackee","Frame 91868.png"),  project: "trackee" },
+  { id: "trackee-f3",        label: "Frame 3",           thumb: p("Trackee","Frame 91871.png"),  src: p("Trackee","Frame 91871.png"),  project: "trackee" },
+  { id: "trackee-f4",        label: "Frame 4",           thumb: p("Trackee","Frame 91876.jpg"),  src: p("Trackee","Frame 91876.jpg"),  project: "trackee" },
+  { id: "trackee-f5",        label: "Frame 5",           thumb: p("Trackee","Frame 91877.jpg"),  src: p("Trackee","Frame 91877.jpg"),  project: "trackee" },
+  { id: "trackee-f6",        label: "Frame 6",           thumb: p("Trackee","Frame 91882.png"),  src: p("Trackee","Frame 91882.png"),  project: "trackee" },
+  { id: "trackee-f7",        label: "Frame 7",           thumb: p("Trackee","Frame 91886.png"),  src: p("Trackee","Frame 91886.png"),  project: "trackee" },
+  // WingRiders
+  { id: "wingriders-05",     label: "Screen 05",         thumb: p("WingRiders","screen05.jpg"),  src: p("WingRiders","screen05.jpg"),  project: "wingriders" },
+  { id: "wingriders-08",     label: "Screen 08",         thumb: p("WingRiders","screen08.jpg"),  src: p("WingRiders","screen08.jpg"),  project: "wingriders" },
+  { id: "wingriders-11",     label: "Screen 11",         thumb: p("WingRiders","screen11.jpg"),  src: p("WingRiders","screen11.jpg"),  project: "wingriders" },
+  { id: "wingriders-14",     label: "Screen 14",         thumb: p("WingRiders","screen14.jpg"),  src: p("WingRiders","screen14.jpg"),  project: "wingriders" },
+  { id: "wingriders-15",     label: "Screen 15",         thumb: p("WingRiders","screen15.jpg"),  src: p("WingRiders","screen15.jpg"),  project: "wingriders" },
+  { id: "wingriders-16",     label: "Screen 16",         thumb: p("WingRiders","screen16.jpg"),  src: p("WingRiders","screen16.jpg"),  project: "wingriders" },
+  { id: "wingriders-19",     label: "Screen 19",         thumb: p("WingRiders","screen19.jpg"),  src: p("WingRiders","screen19.jpg"),  project: "wingriders" },
+  // World
+  { id: "world-main",        label: "World",             thumb: p("World","s02_V2 2.png"),        src: p("World","s02_V2 2.png"),        project: "world"      },
 ];
 
 const SIDEBAR_FOLDERS = [
-  { id: "all", label: "All Projects" },
-  { id: "cardinal", label: "Cardinal" },
-  { id: "freehold", label: "Freehold" },
-  { id: "thirdweb", label: "Thirdweb" },
-  { id: "realitiez", label: "Realitiez" },
+  { id: "all",        label: "All Projects" },
+  { id: "cardinal",   label: "Cardinal"     },
+  { id: "freehold",   label: "Freehold"     },
+  { id: "thirdweb",   label: "Thirdweb"     },
+  { id: "realitiez",  label: "Realitiez"    },
+  { id: "districts",  label: "Districts"    },
+  { id: "piggybank",  label: "PiggyBank"    },
+  { id: "silencio",   label: "Silencio"     },
+  { id: "trackee",    label: "Trackee"      },
+  { id: "wingriders", label: "WingRiders"   },
+  { id: "world",      label: "World"        },
 ] as const;
 
 type SidebarFolderId = (typeof SIDEBAR_FOLDERS)[number]["id"] | "trash";
@@ -69,7 +140,7 @@ export default function FinderWindow({ winId, finderInitialFolder }: FinderWindo
       ? []
       : selectedFolder === "all"
         ? FINDER_ITEMS
-        : FINDER_ITEMS.filter((item) => item.id === selectedFolder);
+        : FINDER_ITEMS.filter((item) => item.project === selectedFolder);
 
   navRef.current = {
     winId,
@@ -177,26 +248,24 @@ export default function FinderWindow({ winId, finderInitialFolder }: FinderWindo
   }, [winId]);
 
   const openImageWindow = useCallback(
-    async (item: (typeof FINDER_ITEMS)[0]) => {
+    async (item: FinderItem) => {
       let size: { width: number; height: number } | undefined;
-      if (item.id in PROJECT_IMAGES) {
-        const cached = getCachedImageSize(item.id);
-        if (cached) {
-          size = cached;
-        } else {
-          startLoading();
-          try {
-            size = await preloadImageDimensions(item.id, PROJECT_IMAGES[item.id as keyof typeof PROJECT_IMAGES]);
-          } finally {
-            stopLoading();
-          }
+      const cached = getCachedImageSize(item.id);
+      if (cached) {
+        size = cached;
+      } else {
+        startLoading();
+        try {
+          size = await preloadImageDimensions(item.id, item.src);
+        } finally {
+          stopLoading();
         }
       }
       openWindow({
         id: windowId(item.id),
         type: "image",
         title: item.label,
-        props: { projectId: item.id },
+        props: { projectId: item.id, src: item.src },
         size,
       });
     },
@@ -204,7 +273,7 @@ export default function FinderWindow({ winId, finderInitialFolder }: FinderWindo
   );
 
   const handleItemClick = useCallback(
-    (item: (typeof FINDER_ITEMS)[0]) => {
+    (item: FinderItem) => {
       if (isMobile) {
         openImageWindow(item);
         return;
@@ -293,12 +362,7 @@ export default function FinderWindow({ winId, finderInitialFolder }: FinderWindo
                   background: isSelected ? "rgba(0,0,0,0.11)" : "transparent",
                 }}
                 onClick={() => setSelectedFolder(folder.id)}
-                onDoubleClick={() => {
-                  if (folder.id !== "all") {
-                    const item = FINDER_ITEMS.find((i) => i.id === folder.id);
-                    if (item) openImageWindow(item);
-                  }
-                }}
+                onDoubleClick={() => setSelectedFolder(folder.id)}
               >
                 {/* Folder icon */}
                 <svg

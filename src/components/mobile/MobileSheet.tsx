@@ -9,6 +9,7 @@ import MeWindow from "@/components/windows/MeWindow";
 import ImageWindow from "@/components/windows/ImageWindow";
 import FinderWindow from "@/components/windows/FinderWindow";
 import SpotifyPlaylistWindow from "@/components/windows/SpotifyPlaylistWindow";
+import GalleryWindow from "@/components/windows/GalleryWindow";
 
 export default function MobileSheet() {
   const { windows, closeWindow } = useWindowStore();
@@ -71,6 +72,7 @@ export default function MobileSheet() {
                   />
                 )}
                 {topWindow.type === "spotify" && <SpotifyPlaylistWindow />}
+                {topWindow.type === "gallery" && <GalleryWindow projectId={topWindow.props?.projectId} />}
               </div>
             </div>
           </motion.div>

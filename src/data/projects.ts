@@ -132,6 +132,7 @@ export const DEFAULT_WINDOW_SIZES: Record<
   finder: { width: 760, height: 500 },
   video: { width: 340, height: 640 },
   spotify: { width: 440, height: 460 },
+  gallery: { width: 760, height: 580 },
 };
 
 // ─────────────────────────────────────────────────────────────────

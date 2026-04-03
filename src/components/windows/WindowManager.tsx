@@ -10,6 +10,7 @@ import FinderWindow from "./FinderWindow";
 import VideoPlayer from "./VideoPlayer";
 import MeWindow from "./MeWindow";
 import SpotifyPlaylistWindow from "./SpotifyPlaylistWindow";
+import GalleryWindow from "./GalleryWindow";
 
 function WindowContent({
   winId,
@@ -24,7 +25,7 @@ function WindowContent({
     case "project":
       return <ProjectWindow projectId={props?.projectId} />;
     case "image":
-      return <ImageWindow winId={winId} projectId={props?.projectId} />;
+      return <ImageWindow winId={winId} projectId={props?.projectId} src={props?.src} />;
     case "about":
       return <AboutWindow />;
     case "finder":
@@ -37,6 +38,8 @@ function WindowContent({
       return <MeWindow />;
     case "spotify":
       return <SpotifyPlaylistWindow />;
+    case "gallery":
+      return <GalleryWindow projectId={props?.projectId} />;
     default:
       return null;
   }

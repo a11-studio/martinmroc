@@ -9,7 +9,8 @@ export type WindowType =
   | "video"
   | "me"
   | "image"
-  | "spotify";
+  | "spotify"
+  | "gallery";
 
 export interface WindowInstance {
   id: string;
