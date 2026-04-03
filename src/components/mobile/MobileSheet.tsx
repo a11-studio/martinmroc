@@ -64,7 +64,13 @@ export default function MobileSheet() {
                 {topWindow.type === "about" && <AboutWindow />}
                 {topWindow.type === "video" && <VideoPlayer />}
                 {topWindow.type === "me" && <ImageWindow winId={topWindow.id} projectId="me" />}
-                {topWindow.type === "image" && <ImageWindow winId={topWindow.id} projectId={topWindow.props?.projectId} />}
+                {topWindow.type === "image" && (
+                  <ImageWindow
+                    winId={topWindow.id}
+                    projectId={topWindow.props?.projectId}
+                    src={topWindow.props?.src}
+                  />
+                )}
                 {topWindow.type === "finder" && (
                   <FinderWindow
                     winId={topWindow.id}

@@ -189,4 +189,14 @@
     border-right: 6px solid transparent;
     border-top: 6px solid var(--dock-tooltip-bg);
   }
+
+  /* Easter egg: Click.dmg — scanline drift (GlitchOverlay) */
+  @keyframes glitch-scan-drift {
+    0% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(4px);
+    }
+  }
 }

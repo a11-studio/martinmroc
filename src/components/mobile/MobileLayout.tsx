@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useWindowStore } from "@/store/windowStore";
+import { useGlitchStore } from "@/store/glitchStore";
 import { ICON_THUMBNAILS, WALLPAPER } from "@/data/assets";
 import { windowId } from "@/lib/utils";
 import MobileDock from "./MobileDock";
@@ -37,6 +38,13 @@ const MOBILE_ICONS = [
     thumb: ICON_THUMBNAILS.folder,
     variant: "folder" as const,
   },
+  {
+    id: "clickDmg",
+    label: "Click.dmg",
+    type: "project" as const,
+    thumb: ICON_THUMBNAILS.clickDmg,
+    variant: "app" as const,
+  },
 ];
 
 const ICON_POSITIONS = [
@@ -44,10 +52,35 @@ const ICON_POSITIONS = [
   { left: "58%", top: "28%" },
   { left: "34%", top: "56%" },
   { left: "72%", top: "44%" },
+  { left: "66%", top: "62%" },
 ];
 
 export default function MobileLayout() {
   const { openWindow } = useWindowStore();
+  const startGlitch = useGlitchStore((s) => s.start);
+  const glitchActive = useGlitchStore((s) => s.active);
+
+  const handleIconPress = (icon: (typeof MOBILE_ICONS)[number]) => {
+    if (glitchActive && icon.id !== "clickDmg") return;
+    if (icon.id === "clickDmg") {
+      startGlitch();
+      return;
+    }
+    openWindow(
+      icon.type === "finder"
+        ? {
+            id: windowId("projects"),
+            type: "finder",
+            title: "Projects",
+            props: { finderInitialFolder: "all" },
+          }
+        : {
+            id: windowId(icon.id),
+            type: icon.type,
+            title: icon.label,
+          }
+    );
+  };
 
   return (
     <motion.div
@@ -83,22 +116,7 @@ export default function MobileLayout() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + i * 0.06, type: "spring", stiffness: 340, damping: 28 }}
-              onClick={() =>
-                openWindow(
-                  icon.type === "finder"
-                    ? {
-                        id: windowId("projects"),
-                        type: "finder",
-                        title: "Projects",
-                        props: { finderInitialFolder: "all" },
-                      }
-                    : {
-                        id: windowId(icon.id),
-                        type: icon.type,
-                        title: icon.label,
-                      }
-                )
-              }
+              onClick={() => handleIconPress(icon)}
               aria-label={`Open ${icon.label}`}
             >
               {/* Icon image */}

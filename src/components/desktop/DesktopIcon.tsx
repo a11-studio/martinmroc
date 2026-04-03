@@ -10,6 +10,7 @@ import { getCachedImageSize, preloadImageDimensions } from "@/lib/imageDimension
 import { PROJECT_IMAGES } from "@/data/assets";
 import { DEFAULT_WINDOW_SIZES } from "@/data/projects";
 import { useLoadingStore } from "@/store/loadingStore";
+import { useGlitchStore } from "@/store/glitchStore";
 import type { DesktopIconData } from "@/types";
 
 const SELECTION_TRANSITION = { duration: 0.14, ease: "easeOut" };
@@ -50,6 +51,10 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
   const L = compact ? LAYOUT.compact : LAYOUT.normal;
   const prefersReduced = useReducedMotion();
   const { openWindow } = useWindowStore();
+  const startGlitch = useGlitchStore((s) => s.start);
+  const glitchActive = useGlitchStore((s) => s.active);
+  const iconDead = useGlitchStore((s) => !!s.deadIcons[icon.id]);
+  const iconCorrupting = useGlitchStore((s) => s.corruptingIconId === icon.id);
   const { selectIcon, selectedIconId, setIconPosition } = useDesktopStore();
   const { startLoading, stopLoading } = useLoadingStore();
   const isSelected = selectedIconId === icon.id;
@@ -66,6 +71,11 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
   const didDrag = useRef(false);
 
   const handleOpenWindow = useCallback(async () => {
+    if (icon.id === "clickDmg") {
+      startGlitch();
+      return;
+    }
+
     // Single Finder window for Projects + Trash — switch view via props
     if (icon.type === "finder") {
       openWindow({
@@ -104,10 +114,11 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
       props: icon.props ?? { projectId: icon.id },
       size,
     });
-  }, [icon, openWindow, startLoading, stopLoading]);
+  }, [icon, openWindow, startLoading, stopLoading, startGlitch]);
 
   const handleClick = useCallback(() => {
     if (didDrag.current) return;
+    if (glitchActive && icon.id !== "clickDmg") return;
     selectIcon(icon.id);
 
     if (clickTimer.current) {
@@ -119,7 +130,7 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
     clickTimer.current = setTimeout(() => {
       clickTimer.current = null;
     }, 280);
-  }, [icon.id, selectIcon, handleOpenWindow]);
+  }, [icon.id, selectIcon, handleOpenWindow, glitchActive]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -135,13 +146,17 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
   const isAbout = icon.type === "about";
   const isPlay = icon.id === "play";
   const isMe = icon.id === "me";
+  /** Disk / app-style icons — square thumb, no 4:3 crop */
+  const isSquareThumb = icon.id === "play" || icon.id === "clickDmg";
+
+  const dragDisabled = glitchActive || iconDead;
 
   return (
     <motion.div
       className="absolute flex flex-col items-center cursor-default desktop-icon"
-      style={{ x, y, left: 0, top: 0, width: L.outerW, gap: L.gap }}
+      style={{ x, y, left: 0, top: 0, pointerEvents: iconDead ? "none" : undefined }}
       data-icon-id={icon.id}
-      drag
+      drag={!dragDisabled}
       dragMomentum={false}
       dragElastic={0}
       onDragStart={() => { didDrag.current = true; }}
@@ -149,14 +164,42 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
         setIconPosition(icon.id, { x: x.get(), y: y.get() });
         setTimeout(() => { didDrag.current = false; }, 50);
       }}
-      whileTap={prefersReduced ? {} : { scale: 0.98 }}
+      whileTap={prefersReduced || dragDisabled ? {} : { scale: 0.98 }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={0}
+      tabIndex={iconDead ? -1 : 0}
       role="button"
       aria-label={`Open ${icon.label}`}
       aria-selected={isSelected}
     >
+      <motion.div
+        className="flex flex-col items-center"
+        style={{ width: L.outerW, gap: L.gap }}
+        animate={
+          iconDead
+            ? {
+                opacity: 0,
+                y: 52,
+                scale: 0.78,
+                filter: "blur(8px) saturate(0)",
+                transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+              }
+            : iconCorrupting
+              ? {
+                  opacity: [1, 0.82, 0.92, 0.78, 0.88, 1],
+                  x: [0, -2, 2, -1.5, 1, 0],
+                  rotate: [0, -1.5, 1.5, -1, 0],
+                  filter: [
+                    "hue-rotate(0deg) contrast(1)",
+                    "hue-rotate(40deg) contrast(1.12)",
+                    "hue-rotate(-20deg) contrast(1.08)",
+                    "hue-rotate(0deg) contrast(1)",
+                  ],
+                  transition: { duration: 0.85, ease: "easeInOut" },
+                }
+              : { opacity: 1, y: 0, x: 0, scale: 1, rotate: 0, filter: "none" }
+        }
+      >
       {/* Thumbnail container — selection highlight wraps this */}
       <div className="relative flex items-center justify-center" style={{ width: L.thumb, height: L.thumb }}>
         <motion.div
@@ -176,7 +219,7 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
           <Image src={icon.thumbnailSrc} alt={icon.label} width={L.thumb} height={L.thumb} className="object-contain pointer-events-none" draggable={false} />
         ) : isAbout ? (
           <Image src={icon.thumbnailSrc} alt={icon.label} width={L.about} height={L.about} className="object-contain pointer-events-none" draggable={false} />
-        ) : isPlay ? (
+        ) : isSquareThumb ? (
           <Image src={icon.thumbnailSrc} alt={icon.label} width={L.thumb} height={L.thumb} className="object-contain pointer-events-none" draggable={false} />
         ) : isMe ? (
           <Image
@@ -230,6 +273,7 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
       >
         {icon.label}
       </motion.span>
+      </motion.div>
     </motion.div>
   );
 }

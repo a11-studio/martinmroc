@@ -3,6 +3,7 @@
 import { useRef, useCallback } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useWindowStore } from "@/store/windowStore";
+import { useGlitchStore } from "@/store/glitchStore";
 import type { WindowInstance } from "@/types";
 
 interface WindowProps {
@@ -20,6 +21,10 @@ export default function Window({ window: win, children }: WindowProps) {
   const prefersReduced = useReducedMotion();
   const { closeWindow, focusWindow, minimizeWindow, toggleMaximize, moveWindow } =
     useWindowStore();
+  const windowChaos = useGlitchStore(
+    (s) => s.active && !s.crashed && s.overlayStage >= 2
+  );
+  const winGlitch = windowChaos && !prefersReduced;
 
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
@@ -107,60 +112,78 @@ export default function Window({ window: win, children }: WindowProps) {
       aria-label={win.title}
       aria-modal="true"
     >
-      {/* Reveal overlay: fades from opaque to transparent. Blur layer stays at opacity:1. */}
-      {!prefersReduced && (
-        <motion.div
-          className="absolute inset-0 z-[100] pointer-events-none"
-          style={{
-            background: revealOverlayColor,
-            borderRadius: "inherit",
-          }}
-          initial={{ opacity: 1 }}
-          animate={{ opacity: 0 }}
-          transition={springConfig}
-        />
-      )}
-      {isFinderWindow ? (
-        <div className="w-full h-full">{children}</div>
-      ) : (
-        <div className="w-full h-full flex flex-col bg-white">
-          <div
-            className="window-drag-area flex items-center gap-2 px-[14px] min-h-[40px] py-1.5 shrink-0"
+      <motion.div
+        className="absolute inset-0 overflow-hidden"
+        style={{ borderRadius: "inherit" }}
+        animate={
+          winGlitch
+            ? {
+                x: [0, -2, 2, -1.5, 1.5, 0],
+                y: [0, 1, -1.5, 1, -1, 0],
+                opacity: [1, 0.97, 0.99, 0.96, 1],
+              }
+            : { x: 0, y: 0, opacity: 1 }
+        }
+        transition={
+          winGlitch
+            ? { duration: 0.55, repeat: Infinity, ease: "easeInOut" }
+            : { duration: 0.2 }
+        }
+      >
+        {/* Reveal overlay: fades from opaque to transparent. Blur layer stays at opacity:1. */}
+        {!prefersReduced && (
+          <motion.div
+            className="absolute inset-0 z-[100] pointer-events-none"
             style={{
-              cursor: isFS ? "default" : "default",
-              background: "rgba(246,246,246,0.95)",
-              borderRadius: isFS ? "0" : "26px 26px 0 0",
+              background: revealOverlayColor,
+              borderRadius: "inherit",
             }}
-          >
-            <div className="flex items-center gap-[9px]" role="group" aria-label="Window controls">
-              {TRAFFIC_LIGHTS.map((light) => (
-                <TrafficLight
-                  key={light.id}
-                  color={light.color}
-                  symbol={light.symbol}
-                  aria-label={light.id}
-                  onClick={() => {
-                    if (light.id === "close") closeWindow(win.id);
-                    else if (light.id === "minimize") minimizeWindow(win.id);
-                    else if (light.id === "maximize") toggleMaximize(win.id);
-                  }}
-                />
-              ))}
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            transition={springConfig}
+          />
+        )}
+        {isFinderWindow ? (
+          <div className="h-full w-full">{children}</div>
+        ) : (
+          <div className="flex h-full w-full flex-col bg-white">
+            <div
+              className="window-drag-area flex min-h-[40px] shrink-0 items-center gap-2 px-[14px] py-1.5"
+              style={{
+                cursor: isFS ? "default" : "default",
+                background: "rgba(246,246,246,0.95)",
+                borderRadius: isFS ? "0" : "26px 26px 0 0",
+              }}
+            >
+              <div className="flex items-center gap-[9px]" role="group" aria-label="Window controls">
+                {TRAFFIC_LIGHTS.map((light) => (
+                  <TrafficLight
+                    key={light.id}
+                    color={light.color}
+                    symbol={light.symbol}
+                    aria-label={light.id}
+                    onClick={() => {
+                      if (light.id === "close") closeWindow(win.id);
+                      else if (light.id === "minimize") minimizeWindow(win.id);
+                      else if (light.id === "maximize") toggleMaximize(win.id);
+                    }}
+                  />
+                ))}
+              </div>
+              <span className="flex-1 truncate pr-[54px] text-center text-[13px] font-semibold leading-snug text-[rgba(0,0,0,0.8)]">
+                {win.title}
+              </span>
             </div>
-            {/* leading-snug — leading-none clipped descenders (j, g, p) in the title */}
-            <span className="flex-1 text-center text-[13px] font-semibold text-[rgba(0,0,0,0.8)] leading-snug truncate pr-[54px]">
-              {win.title}
-            </span>
-          </div>
 
-          <div
-            className="flex-1 overflow-auto min-h-0"
-            style={{ borderRadius: isFS ? "0" : "0 0 26px 26px" }}
-          >
-            {children}
+            <div
+              className="min-h-0 flex-1 overflow-auto"
+              style={{ borderRadius: isFS ? "0" : "0 0 26px 26px" }}
+            >
+              {children}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </motion.div>
     </motion.div>
   );
 }

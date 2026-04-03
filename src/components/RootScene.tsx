@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import CursorLoader from "./loading/CursorLoader";
 import Desktop from "./desktop/Desktop";
 import MobileLayout from "./mobile/MobileLayout";
+import GlitchOverlay from "./effects/GlitchOverlay";
 import { useLoadingStore } from "@/store/loadingStore";
 
 export default function RootScene() {
@@ -37,6 +38,8 @@ export default function RootScene() {
       <AnimatePresence>
         {showLoader && <CursorLoader key="loader" />}
       </AnimatePresence>
+
+      <GlitchOverlay />
     </div>
   );
 }

@@ -81,6 +81,14 @@ export const DESKTOP_ICONS: DesktopIconData[] = [
     props: { projectId: "freehold" },
   },
   {
+    id: "clickDmg",
+    label: "Click.dmg",
+    type: "project",
+    thumbnailSrc: ICON_THUMBNAILS.clickDmg,
+    defaultPosition: { x: 63.6, y: 42.3 },
+    props: { projectId: "clickDmg" },
+  },
+  {
     id: "thirdweb",
     label: "Thirdweb.jpg",
     type: "project",

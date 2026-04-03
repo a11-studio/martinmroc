@@ -5,7 +5,7 @@
 // Wallpaper
 export const WALLPAPER = {
   background: "/images/bg.png",
-  mobile: "/images/bg-mobile.png",
+  mobile: "/images/background-mobile.jpg",
 } as const;
 
 // Desktop icon thumbnails (≤200 px WebP)
@@ -18,6 +18,7 @@ export const ICON_THUMBNAILS = {
   about:     "/images/thumbs/about.webp",
   play:      "/images/thumbs/play.webp",
   folder:    "/images/thumbs/folder.svg",
+  clickDmg:  "/images/thumbs/skull2.webp",
 } as const;
 
 // Full-resolution project images — WebP quality 93 (~200KB sweet spot)
@@ -27,6 +28,7 @@ export const PROJECT_IMAGES = {
   cardinal:  "/images/projects/cardinal.webp",
   thirdweb:  "/images/projects/thirdweb.webp",
   realitiez: "/images/projects/realitiez.webp",
+  clickDmg:  "/images/thumbs/skull2.webp",
 } as const;
 
 // Dock icons — 128 px WebP from /public/images/dock/

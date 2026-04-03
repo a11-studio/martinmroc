@@ -29,6 +29,7 @@ export default function ImageWindow({ projectId, src: srcProp }: ImageWindowProp
       : null;
 
   const isBorderless = projectId === "me" || projectId === "realitiez";
+  const isClickDmg = projectId === "clickDmg";
 
   useEffect(() => {
     if (imageSrc) startLoading();
@@ -58,7 +59,7 @@ export default function ImageWindow({ projectId, src: srcProp }: ImageWindowProp
   return (
     <div
       className={`relative w-full h-full overflow-hidden ${
-        isBorderless ? "bg-black" : "bg-black/5"
+        isBorderless ? "bg-black" : isClickDmg ? "bg-[#1c1c1e]" : "bg-black/5"
       }`}
     >
       {thumbnailSrc && (
@@ -86,7 +87,7 @@ export default function ImageWindow({ projectId, src: srcProp }: ImageWindowProp
           quality={90}
           unoptimized
           sizes="(max-width: 768px) 100vw, 80vw"
-          className="object-scale-down"
+          className={isClickDmg ? "object-contain" : "object-scale-down"}
           draggable={false}
           onLoad={(e) => {
             const img = e.currentTarget as HTMLImageElement;
