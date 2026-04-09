@@ -1,7 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Image from "next/image";
 import { MAILTO_COLLABORATION_HREF } from "@/lib/mailto";
+import { PROJECT_IMAGES } from "@/data/assets";
 
 const SPECIALTIES = [
   "Product & interface (UI) design",
@@ -92,11 +94,15 @@ export default function AboutWindow() {
 
         {/* Who — compact identity, not hero */}
         <div className="flex items-center gap-3 mb-10">
-          <div
-            className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-[16px] font-semibold shrink-0"
-            aria-hidden="true"
-          >
-            M
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full ring-1 ring-black/[0.08] shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
+            <Image
+              src={PROJECT_IMAGES.me}
+              alt="Martin Mroč"
+              fill
+              sizes="40px"
+              className="object-cover object-top"
+              draggable={false}
+            />
           </div>
           <div className="min-w-0">
             <p className="text-[15px] font-semibold text-[#1c1c1e] leading-tight">

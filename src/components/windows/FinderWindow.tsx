@@ -510,16 +510,18 @@ export default function FinderWindow({ winId, finderInitialFolder }: FinderWindo
                     <Image
                       src={item.thumb}
                       alt={item.label}
-                      width={72}
-                      height={54}
-                      className="relative h-full w-full object-cover pointer-events-none"
+                      fill
+                      sizes="72px"
+                      className="z-0 object-cover pointer-events-none"
                       draggable={false}
                     />
                     <motion.div
                       className="absolute inset-0 rounded-[4px] pointer-events-none"
                       initial={false}
                       animate={{
-                        background: isSelected ? "rgba(255,255,255,0.08)" : "transparent",
+                        background: isSelected
+                          ? "rgba(255,255,255,0.08)"
+                          : "rgba(255,255,255,0)",
                         boxShadow: isSelected
                           ? "inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 0 12px rgba(255,255,255,0.06)"
                           : "none",
@@ -537,8 +539,12 @@ export default function FinderWindow({ winId, finderInitialFolder }: FinderWindo
                     }}
                     initial={false}
                     animate={{
-                      backgroundColor: isSelected ? "#0A84FF" : "transparent",
-                      color: isSelected ? "white" : "rgba(0,0,0,0.8)",
+                      backgroundColor: isSelected
+                        ? "rgba(10, 132, 255, 1)"
+                        : "rgba(10, 132, 255, 0)",
+                      color: isSelected
+                        ? "rgba(255,255,255,1)"
+                        : "rgba(0,0,0,0.8)",
                     }}
                     transition={SELECTION_TRANSITION}
                   >

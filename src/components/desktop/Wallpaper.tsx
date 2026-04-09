@@ -11,6 +11,7 @@ export default function Wallpaper() {
         alt=""
         fill
         priority
+        sizes="100vw"
         unoptimized
         className="object-cover object-[center_25%] pointer-events-none"
         draggable={false}

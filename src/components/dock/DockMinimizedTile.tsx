@@ -115,15 +115,15 @@ function MinimizedThumb({ win }: { win: WindowInstance }) {
   if (isMe) {
     return (
       <div
-        className="h-12 w-12 max-[1199px]:h-[42px] max-[1199px]:w-[42px] shrink-0 overflow-hidden rounded-[4px] pointer-events-none"
+        className="relative h-12 w-12 max-[1199px]:h-[42px] max-[1199px]:w-[42px] shrink-0 overflow-hidden rounded-[4px] pointer-events-none"
         style={{ boxShadow: THUMB_SHADOW }}
       >
         <Image
           src={src}
           alt=""
-          width={48}
-          height={48}
-          className="h-full w-full object-cover pointer-events-none"
+          fill
+          sizes="(max-width: 1199px) 42px, 48px"
+          className="object-cover pointer-events-none"
           draggable={false}
         />
       </div>

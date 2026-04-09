@@ -14,6 +14,9 @@ const MAIL_BADGE_DELAY_MS = 10_000;
 /** First four dock apps — tooltip explains these are the user’s daily stack */
 const MY_STACK_APP_IDS = new Set(["photoshop", "after-effects", "figma", "cursor"]);
 
+/** Dock icon slot: 48×48px desktop, 42×42px when viewport ≤1199px — matches parent button */
+const DOCK_ICON_FILL_SIZES = "(max-width: 1199px) 42px, 48px";
+
 function dockTooltipLabel(item: DockItemData): string {
   if (MY_STACK_APP_IDS.has(item.id)) {
     return `My stack - ${item.label}`;
@@ -72,11 +75,19 @@ function DockItemInner({ item }: DockItemProps) {
     if (item.render === "composite" && item.compositeSrc) {
       return (
         <div className={`relative size-full overflow-hidden ${rounded} max-[1199px]:rounded-[11px]`}>
-          <Image src={item.compositeSrc.bg} alt="" fill className="object-contain object-center pointer-events-none" draggable={false} />
+          <Image
+            src={item.compositeSrc.bg}
+            alt=""
+            fill
+            sizes={DOCK_ICON_FILL_SIZES}
+            className="object-contain object-center pointer-events-none"
+            draggable={false}
+          />
           <Image
             src={item.compositeSrc.text}
             alt={item.label}
             fill
+            sizes={DOCK_ICON_FILL_SIZES}
             className="object-contain object-center pointer-events-none"
             style={{ padding: "25.43% 17.33% 28.42% 22.5%" }}
             draggable={false}
@@ -112,7 +123,14 @@ function DockItemInner({ item }: DockItemProps) {
     if (item.iconSrc) {
       return (
         <div className={`relative size-full overflow-hidden ${rounded} max-[1199px]:rounded-[11px]`}>
-          <Image src={item.iconSrc} alt={item.label} fill className="object-contain object-center pointer-events-none" draggable={false} />
+          <Image
+            src={item.iconSrc}
+            alt={item.label}
+            fill
+            sizes={DOCK_ICON_FILL_SIZES}
+            className="object-contain object-center pointer-events-none"
+            draggable={false}
+          />
         </div>
       );
     }

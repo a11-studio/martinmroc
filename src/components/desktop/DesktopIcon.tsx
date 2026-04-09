@@ -207,7 +207,9 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
           style={{ borderRadius: L.thumbRound }}
           initial={false}
           animate={{
-            background: isSelected ? "rgba(255,255,255,0.08)" : "transparent",
+            background: isSelected
+              ? "rgba(255,255,255,0.08)"
+              : "rgba(255,255,255,0)",
             boxShadow: isSelected
               ? "inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 0 12px rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.12)"
               : "none",
@@ -222,19 +224,29 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
         ) : isSquareThumb ? (
           <Image src={icon.thumbnailSrc} alt={icon.label} width={L.thumb} height={L.thumb} className="object-contain pointer-events-none" draggable={false} />
         ) : isMe ? (
-          <Image
-            src={icon.thumbnailSrc}
-            alt={icon.label}
-            width={L.thumb}
-            height={L.thumb}
-            className="object-cover pointer-events-none"
-            style={{ borderRadius: L.imgRound, boxShadow: "0 2px 8px rgba(0,0,0,0.25)" }}
-            draggable={false}
-          />
+          <div
+            className="relative overflow-hidden pointer-events-none"
+            style={{
+              width: L.thumb,
+              height: L.thumb,
+              borderRadius: L.imgRound,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+            }}
+          >
+            <Image
+              src={icon.thumbnailSrc}
+              alt={icon.label}
+              fill
+              sizes={`${L.thumb}px`}
+              className="object-cover pointer-events-none"
+              draggable={false}
+              priority
+            />
+          </div>
         ) : (
           /* Project thumbnails: fixed 4:3 frame, cover crop — consistent for all .jpg icons */
           <div
-            className="overflow-hidden pointer-events-none"
+            className="relative overflow-hidden pointer-events-none"
             style={{
               width: L.thumb,
               height: L.projectH,
@@ -245,9 +257,9 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
             <Image
               src={icon.thumbnailSrc}
               alt={icon.label}
-              width={L.thumb}
-              height={L.projectH}
-              className="h-full w-full object-cover pointer-events-none"
+              fill
+              sizes={`${L.thumb}px`}
+              className="object-cover pointer-events-none"
               draggable={false}
             />
           </div>
@@ -266,8 +278,10 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
         }}
         initial={false}
         animate={{
-          backgroundColor: isSelected ? "#0A84FF" : "transparent",
-          color: "white",
+          backgroundColor: isSelected
+            ? "rgba(10, 132, 255, 1)"
+            : "rgba(10, 132, 255, 0)",
+          color: "rgba(255,255,255,1)",
         }}
         transition={SELECTION_TRANSITION}
       >

@@ -96,6 +96,7 @@ export default function MobileLayout() {
           src={WALLPAPER.mobile}
           alt=""
           fill
+          sizes="100vw"
           className="object-cover pointer-events-none"
           draggable={false}
           unoptimized
@@ -122,16 +123,17 @@ export default function MobileLayout() {
               {/* Icon image */}
               {icon.variant === "photo" ? (
                 <div
-                  className="rounded-[4px] overflow-hidden"
+                  className="relative rounded-[4px] overflow-hidden"
                   style={{ width: 52, height: 52, boxShadow: "0 2px 8px rgba(0,0,0,0.28)" }}
                 >
                   <Image
                     src={icon.thumb}
                     alt={icon.label}
-                    width={52}
-                    height={52}
-                    className="w-full h-full object-cover pointer-events-none"
+                    fill
+                    sizes="52px"
+                    className="object-cover pointer-events-none"
                     draggable={false}
+                    priority={icon.id === "me"}
                   />
                 </div>
               ) : icon.variant === "folder" ? (
