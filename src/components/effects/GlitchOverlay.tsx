@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * Click.dmg “signal death” overlay.
+ * Visual language inspired by Yoichi Kobayashi’s GLSL glitch study (RGB split, blocky breakup);
+ * we stay DOM/canvas-based here — full shader pass would need a scene capture + WebGL stack.
+ * @see https://ykob.github.io/sketch-threejs/sketch/glitch.html
+ * @see https://codepen.io/ykob/pen/GmEzoQ
+ */
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
@@ -22,7 +30,7 @@ const FLASH_LINES = [
 
 function FlashLine({ text, onDone }: { text: string; onDone: () => void }) {
   useEffect(() => {
-    const t = window.setTimeout(onDone, 720);
+    const t = window.setTimeout(onDone, 520);
     return () => window.clearTimeout(t);
   }, [onDone]);
 
@@ -53,6 +61,10 @@ export default function GlitchOverlay() {
   const prefersReduced = useReducedMotion();
 
   const [flashes, setFlashes] = useState<{ id: number; text: string }[]>([]);
+  /** CRT-style collapse: bright horizontal beam expands, then cuts */
+  const [tvBeam, setTvBeam] = useState(false);
+  /** One sharp full-frame flash (single hit, not strobing) */
+  const [tvFlash, setTvFlash] = useState(false);
   const flashId = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
@@ -72,6 +84,8 @@ export default function GlitchOverlay() {
     if (!active) {
       clearTimers();
       document.documentElement.removeAttribute("data-glitch");
+      setTvBeam(false);
+      setTvFlash(false);
       return;
     }
 
@@ -114,6 +128,12 @@ export default function GlitchOverlay() {
     schedule(T.escalateStage3Ms, () => {
       setOverlayStage(3);
       document.documentElement.setAttribute("data-glitch", "collapse");
+      setTvBeam(true);
+      schedule(200, () => setTvBeam(false));
+      schedule(210, () => {
+        setTvFlash(true);
+        schedule(48, () => setTvFlash(false));
+      });
     });
 
     // Per-icon: first ~2s solo, then tight burst
@@ -179,19 +199,19 @@ export default function GlitchOverlay() {
 
     let last = 0;
     const tick = (t: number) => {
-      if (t - last < (overlayStage >= 3 ? 110 : 140)) {
+      if (t - last < (overlayStage >= 3 ? 55 : 130)) {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
       last = t;
       const d = ctx.createImageData(w, h);
-      const alphaBase = overlayStage >= 3 ? 32 : overlayStage >= 2 ? 26 : overlayStage >= 1 ? 18 : 12;
+      const alphaBase = overlayStage >= 3 ? 44 : overlayStage >= 2 ? 28 : overlayStage >= 1 ? 18 : 12;
       for (let i = 0; i < d.data.length; i += 4) {
         const v = Math.random() * 255;
         d.data[i] = v;
         d.data[i + 1] = v;
         d.data[i + 2] = v;
-        d.data[i + 3] = alphaBase + Math.random() * 28;
+        d.data[i + 3] = alphaBase + Math.random() * (overlayStage >= 3 ? 40 : 28);
       }
       ctx.putImageData(d, 0, 0);
       rafRef.current = requestAnimationFrame(tick);
@@ -202,9 +222,13 @@ export default function GlitchOverlay() {
     };
   }, [active, crashed, overlayStage, prefersReduced]);
 
-  // Terminal flashes during spread / escalate
   useEffect(() => {
-    if (!active || overlayStage < 1 || crashed || prefersReduced) return;
+    if (crashed) setFlashes([]);
+  }, [crashed]);
+
+  // Terminal flashes during spread / escalate (not during collapse — would read over black)
+  useEffect(() => {
+    if (!active || overlayStage < 1 || overlayStage >= 3 || crashed || prefersReduced) return;
 
     const spawn = () => {
       const text = FLASH_LINES[Math.floor(Math.random() * FLASH_LINES.length)]!;
@@ -226,22 +250,32 @@ export default function GlitchOverlay() {
     setFlashes((f) => f.filter((x) => x.id !== id));
   };
 
-  /** No sudden full-screen flashes — smooth ramp only (photosensitive safety). */
+  /** Collapse pulls toward black quickly; final frame is near-opaque (no long fade-out). */
   const blackoutOpacity =
-    crashed ? 0.94
-    : overlayStage >= 4 ? 0.84
-    : overlayStage >= 3 ? 0.52
-    : overlayStage >= 2 ? 0.28
-    : overlayStage >= 1 ? 0.14
-    : 0.06;
+    crashed ? 0.97
+    : overlayStage >= 4 ? 0.9
+    : overlayStage >= 3 ? 0.62
+    : overlayStage >= 2 ? 0.3
+    : overlayStage >= 1 ? 0.12
+    : 0.05;
 
   const handleReboot = () => {
     reboot();
     setFlashes([]);
+    setTvBeam(false);
+    setTvFlash(false);
   };
 
   const jitterStrong = overlayStage >= 3 && !crashed;
   const rgbStrong = overlayStage >= 2;
+  const rgbExtreme = overlayStage >= 3 && !crashed;
+
+  const blackoutTransition =
+    crashed
+      ? { duration: 0.05, ease: "linear" as const }
+      : overlayStage >= 3
+        ? { duration: 0.14, ease: [0.5, 0, 1, 1] as const }
+        : { duration: 0.38, ease: "easeOut" as const };
 
   return (
     <AnimatePresence>
@@ -252,7 +286,8 @@ export default function GlitchOverlay() {
           style={{ zIndex: 2147483000, pointerEvents: "auto" }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.45, ease: "easeOut" } }}
+          transition={{ duration: 0.12, ease: "easeOut" }}
+          exit={{ opacity: 0, transition: { duration: 0.35, ease: "easeOut" } }}
           role="presentation"
           aria-hidden={!crashed}
         >
@@ -264,21 +299,21 @@ export default function GlitchOverlay() {
                 ? { x: 0, y: 0, skewX: 0 }
                 : {
                     x: jitterStrong
-                      ? [0, -2, 2, -1.5, 1.5, 0]
+                      ? [0, -4, 5, -3, 4, 0]
                       : [0, -1.5, 1.5, -1, 1, 0],
                     y: jitterStrong
-                      ? [0, 1.5, -2, 1, -1.5, 0]
+                      ? [0, 2.5, -3, 2, -2.5, 0]
                       : [0, 1, -1.5, 0.8, -1, 0],
-                    skewX: jitterStrong ? [0, -0.25, 0.2, 0] : [0, -0.15, 0.12, 0],
+                    skewX: jitterStrong ? [0, -0.45, 0.35, 0] : [0, -0.15, 0.12, 0],
                   }
             }
             transition={
               prefersReduced || crashed
                 ? { duration: 0.2 }
                 : {
-                    duration: jitterStrong ? 0.42 : overlayStage >= 2 ? 0.55 : 0.7,
+                    duration: jitterStrong ? 0.2 : overlayStage >= 2 ? 0.5 : 0.65,
                     repeat: crashed ? 0 : Infinity,
-                    ease: "easeInOut",
+                    ease: "linear",
                   }
             }
           >
@@ -287,33 +322,41 @@ export default function GlitchOverlay() {
                 <motion.div
                   className="pointer-events-none absolute inset-0 mix-blend-screen"
                   style={{
-                    background: "rgba(255,0,0,0.06)",
-                    transform: "translateX(-3px)",
+                    background: rgbExtreme ? "rgba(255,0,0,0.12)" : "rgba(255,0,0,0.06)",
+                    transform: rgbExtreme ? "translateX(-10px)" : "translateX(-4px)",
                   }}
                   animate={{
-                    opacity: rgbStrong ? [0.14, 0.22, 0.17] : [0.08, 0.14, 0.1],
+                    opacity: rgbExtreme
+                      ? [0.22, 0.45, 0.18, 0.38, 0.2]
+                      : rgbStrong
+                        ? [0.14, 0.24, 0.17]
+                        : [0.08, 0.14, 0.1],
                   }}
                   transition={{
-                    duration: rgbStrong ? 0.65 : 0.85,
+                    duration: rgbExtreme ? 0.24 : rgbStrong ? 0.55 : 0.85,
                     repeat: Infinity,
-                    repeatType: "mirror",
-                    ease: "easeInOut",
+                    repeatType: "loop",
+                    ease: "linear",
                   }}
                 />
                 <motion.div
                   className="pointer-events-none absolute inset-0 mix-blend-screen"
                   style={{
-                    background: "rgba(0,255,255,0.05)",
-                    transform: "translateX(3px)",
+                    background: rgbExtreme ? "rgba(0,255,255,0.1)" : "rgba(0,255,255,0.05)",
+                    transform: rgbExtreme ? "translateX(10px)" : "translateX(4px)",
                   }}
                   animate={{
-                    opacity: rgbStrong ? [0.12, 0.2, 0.15] : [0.07, 0.12, 0.09],
+                    opacity: rgbExtreme
+                      ? [0.2, 0.42, 0.16, 0.35, 0.18]
+                      : rgbStrong
+                        ? [0.12, 0.22, 0.15]
+                        : [0.07, 0.12, 0.09],
                   }}
                   transition={{
-                    duration: rgbStrong ? 0.72 : 0.9,
+                    duration: rgbExtreme ? 0.26 : rgbStrong ? 0.58 : 0.9,
                     repeat: Infinity,
-                    repeatType: "mirror",
-                    ease: "easeInOut",
+                    repeatType: "loop",
+                    ease: "linear",
                   }}
                 />
               </>
@@ -335,7 +378,7 @@ export default function GlitchOverlay() {
               style={{
                 width: 112,
                 height: 112,
-                opacity: overlayStage >= 2 ? 0.3 : 0.18,
+                opacity: overlayStage >= 3 ? 0.42 : overlayStage >= 2 ? 0.32 : 0.18,
                 imageRendering: "pixelated",
                 transformOrigin: "top left",
               }}
@@ -359,12 +402,55 @@ export default function GlitchOverlay() {
               </div>
             )}
 
+            {/* Under blackout z-index so heavy black / final frame covers badges */}
+            <div className="pointer-events-none absolute inset-0 z-[4] overflow-hidden">
+              <AnimatePresence>
+                {flashes.map((f) => (
+                  <FlashLine key={f.id} text={f.text} onDone={() => removeFlash(f.id)} />
+                ))}
+              </AnimatePresence>
+            </div>
+
             <motion.div
-              className="absolute inset-0 bg-black"
+              className="absolute inset-0 z-[5] bg-black"
               initial={false}
               animate={{ opacity: blackoutOpacity }}
-              transition={{ duration: 0.7, ease: "easeInOut" }}
+              transition={blackoutTransition}
             />
+
+            {/* CRT-style horizontal beam — “tube” energy collapse */}
+            {!prefersReduced && !crashed && (
+              <div
+                className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center overflow-hidden"
+                aria-hidden
+              >
+                <motion.div
+                  className="w-full max-w-none shrink-0 bg-white mix-blend-screen"
+                  style={{
+                    height: 3,
+                    boxShadow:
+                      "0 0 20px rgba(255,255,255,0.95), 0 0 80px rgba(120,200,255,0.55)",
+                    transformOrigin: "50% 50%",
+                  }}
+                  initial={false}
+                  animate={{
+                    scaleY: tvBeam ? 420 : 0.02,
+                    opacity: tvBeam ? 1 : 0,
+                  }}
+                  transition={{
+                    duration: tvBeam ? 0.2 : 0.08,
+                    ease: tvBeam ? [0.9, 0, 1, 1] : "easeOut",
+                  }}
+                />
+              </div>
+            )}
+
+            {tvFlash && !prefersReduced && (
+              <div
+                className="pointer-events-none absolute inset-0 z-[7] bg-white mix-blend-overlay opacity-[0.92]"
+                aria-hidden
+              />
+            )}
 
             {!prefersReduced && overlayStage >= 2 && !crashed && (
               <motion.div
@@ -381,18 +467,12 @@ export default function GlitchOverlay() {
           </motion.div>
 
           <AnimatePresence>
-            {flashes.map((f) => (
-              <FlashLine key={f.id} text={f.text} onDone={() => removeFlash(f.id)} />
-            ))}
-          </AnimatePresence>
-
-          <AnimatePresence>
             {crashed && (
               <motion.div
-                className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6"
+                className="absolute inset-0 z-[8] flex flex-col items-center justify-center gap-5 px-6"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.55 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
               >
                 <p className="text-center font-mono text-sm text-neutral-500">
                   System restored from safe state.
