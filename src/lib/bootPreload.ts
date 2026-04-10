@@ -19,6 +19,7 @@ export const BOOT_PRELOAD_URLS: string[] = [
   VIDEO.poster,
   "/images/boot-face.svg",
   "/images/Martin%20OS.svg",
+  "/images/crash-face.svg",
 ];
 
 function uniqueUrls(urls: string[]): string[] {

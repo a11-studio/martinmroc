@@ -6,6 +6,9 @@
  * we stay DOM/canvas-based here — full shader pass would need a scene capture + WebGL stack.
  * @see https://ykob.github.io/sketch-threejs/sketch/glitch.html
  * @see https://codepen.io/ykob/pen/GmEzoQ
+ *
+ * Crash end screen layout: Figma Testing — End Screen
+ * https://www.figma.com/design/M00pv4FlMaoNByvuKdpADU/Testing?node-id=510-182
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -17,6 +20,14 @@ import {
   getIconCorruptStartMs,
   getIconCorruptDurationMs,
 } from "@/store/glitchStore";
+
+/** Match boot wordmark asset */
+const CRASH_TITLE_SRC = "/images/Martin%20OS.svg";
+
+/**
+ * Reveal end screen when CRT beam finishes expanding (matches `tvBeam` transition duration 0.2s).
+ */
+const CRASH_REVEAL_UI_MS = 200;
 
 const FLASH_LINES = [
   "buffer: parity fault // non-fatal",
@@ -65,6 +76,15 @@ export default function GlitchOverlay() {
   const [tvBeam, setTvBeam] = useState(false);
   /** One sharp full-frame flash (single hit, not strobing) */
   const [tvFlash, setTvFlash] = useState(false);
+  /** After crash: same collapse stack as stage 3, then Figma end screen */
+  const [crashRevealUi, setCrashRevealUi] = useState(false);
+  const inEndCrashWhite =
+    crashed && !crashRevealUi && !prefersReduced;
+  /** Mid-sequence collapse OR final hand-off — identical visuals */
+  const collapseGlitchActive =
+    (!crashed && overlayStage >= 3) || inEndCrashWhite;
+  const presentationFrozen =
+    prefersReduced || (crashed && crashRevealUi);
   const flashId = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
@@ -78,6 +98,37 @@ export default function GlitchOverlay() {
   const schedule = useCallback((delayMs: number, fn: () => void) => {
     timersRef.current.push(window.setTimeout(fn, delayMs));
   }, []);
+
+  useEffect(() => {
+    if (!active || !crashed) {
+      setCrashRevealUi(false);
+      return;
+    }
+    if (prefersReduced) {
+      setCrashRevealUi(true);
+      return;
+    }
+    setCrashRevealUi(false);
+    const id = window.setTimeout(
+      () => setCrashRevealUi(true),
+      CRASH_REVEAL_UI_MS
+    );
+    return () => window.clearTimeout(id);
+  }, [active, crashed, prefersReduced]);
+
+  /** CRT beam expand only — end UI opens when beam hits full height (CRASH_REVEAL_UI_MS) */
+  useEffect(() => {
+    if (!inEndCrashWhite) {
+      setTvBeam(false);
+      setTvFlash(false);
+      return;
+    }
+    setTvBeam(true);
+    return () => {
+      setTvBeam(false);
+      setTvFlash(false);
+    };
+  }, [inEndCrashWhite]);
 
   // Master timeline
   useEffect(() => {
@@ -175,9 +226,13 @@ export default function GlitchOverlay() {
     setCrashed,
   ]);
 
-  // Noise canvas
+  // Noise canvas — stage 3 density during end crash hand-off too
   useEffect(() => {
-    if (!active || crashed || prefersReduced) {
+    if (!active || prefersReduced) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      return;
+    }
+    if (crashed && crashRevealUi) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       return;
     }
@@ -197,21 +252,25 @@ export default function GlitchOverlay() {
     );
     canvas.style.transform = `scale(${scale * 1.02}) translateZ(0)`;
 
+    const noiseStage =
+      crashed && !crashRevealUi ? 3 : overlayStage;
+
     let last = 0;
-    const tick = (t: number) => {
-      if (t - last < (overlayStage >= 3 ? 55 : 130)) {
+    const tick = (time: number) => {
+      if (time - last < (noiseStage >= 3 ? 55 : 130)) {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
-      last = t;
+      last = time;
       const d = ctx.createImageData(w, h);
-      const alphaBase = overlayStage >= 3 ? 44 : overlayStage >= 2 ? 28 : overlayStage >= 1 ? 18 : 12;
+      const alphaBase =
+        noiseStage >= 3 ? 44 : noiseStage >= 2 ? 28 : noiseStage >= 1 ? 18 : 12;
       for (let i = 0; i < d.data.length; i += 4) {
         const v = Math.random() * 255;
         d.data[i] = v;
         d.data[i + 1] = v;
         d.data[i + 2] = v;
-        d.data[i + 3] = alphaBase + Math.random() * (overlayStage >= 3 ? 40 : 28);
+        d.data[i + 3] = alphaBase + Math.random() * (noiseStage >= 3 ? 40 : 28);
       }
       ctx.putImageData(d, 0, 0);
       rafRef.current = requestAnimationFrame(tick);
@@ -220,7 +279,7 @@ export default function GlitchOverlay() {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [active, crashed, overlayStage, prefersReduced]);
+  }, [active, crashed, crashRevealUi, overlayStage, prefersReduced]);
 
   useEffect(() => {
     if (crashed) setFlashes([]);
@@ -252,8 +311,7 @@ export default function GlitchOverlay() {
 
   /** Collapse pulls toward black quickly; final frame is near-opaque (no long fade-out). */
   const blackoutOpacity =
-    crashed ? 0.97
-    : overlayStage >= 4 ? 0.9
+    overlayStage >= 4 ? 0.9
     : overlayStage >= 3 ? 0.62
     : overlayStage >= 2 ? 0.3
     : overlayStage >= 1 ? 0.12
@@ -266,16 +324,14 @@ export default function GlitchOverlay() {
     setTvFlash(false);
   };
 
-  const jitterStrong = overlayStage >= 3 && !crashed;
-  const rgbStrong = overlayStage >= 2;
-  const rgbExtreme = overlayStage >= 3 && !crashed;
+  const jitterStrong = collapseGlitchActive;
+  const rgbStrong = overlayStage >= 2 && !inEndCrashWhite;
+  const rgbExtreme = collapseGlitchActive;
 
   const blackoutTransition =
-    crashed
-      ? { duration: 0.05, ease: "linear" as const }
-      : overlayStage >= 3
-        ? { duration: 0.14, ease: [0.5, 0, 1, 1] as const }
-        : { duration: 0.38, ease: "easeOut" as const };
+    overlayStage >= 3
+      ? { duration: 0.14, ease: [0.5, 0, 1, 1] as const }
+      : { duration: 0.38, ease: "easeOut" as const };
 
   return (
     <AnimatePresence>
@@ -295,7 +351,7 @@ export default function GlitchOverlay() {
           <motion.div
             className="absolute -inset-[18px]"
             animate={
-              prefersReduced || crashed
+              presentationFrozen
                 ? { x: 0, y: 0, skewX: 0 }
                 : {
                     x: jitterStrong
@@ -308,16 +364,16 @@ export default function GlitchOverlay() {
                   }
             }
             transition={
-              prefersReduced || crashed
+              presentationFrozen
                 ? { duration: 0.2 }
                 : {
                     duration: jitterStrong ? 0.2 : overlayStage >= 2 ? 0.5 : 0.65,
-                    repeat: crashed ? 0 : Infinity,
+                    repeat: presentationFrozen ? 0 : Infinity,
                     ease: "linear",
                   }
             }
           >
-            {!prefersReduced && !crashed && (
+            {!prefersReduced && (!crashed || inEndCrashWhite) && (
               <>
                 <motion.div
                   className="pointer-events-none absolute inset-0 mix-blend-screen"
@@ -362,15 +418,22 @@ export default function GlitchOverlay() {
               </>
             )}
 
-            <div
-              className="pointer-events-none absolute inset-0 mix-blend-multiply"
-              style={{
-                opacity: overlayStage >= 3 ? 0.34 : overlayStage >= 1 ? 0.24 : 0.12,
-                backgroundImage:
-                  "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 3px)",
-                animation: prefersReduced ? "none" : "glitch-scan-drift 3.4s linear infinite",
-              }}
-            />
+            {(!crashed || !crashRevealUi) && (
+              <div
+                className="pointer-events-none absolute inset-0 mix-blend-multiply"
+                style={{
+                  opacity:
+                    overlayStage >= 3
+                      ? 0.34
+                      : overlayStage >= 1
+                        ? 0.24
+                        : 0.12,
+                  backgroundImage:
+                    "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 3px)",
+                  animation: prefersReduced ? "none" : "glitch-scan-drift 3.4s linear infinite",
+                }}
+              />
+            )}
 
             <canvas
               ref={canvasRef}
@@ -378,13 +441,22 @@ export default function GlitchOverlay() {
               style={{
                 width: 112,
                 height: 112,
-                opacity: overlayStage >= 3 ? 0.42 : overlayStage >= 2 ? 0.32 : 0.18,
+                opacity:
+                  crashed && crashRevealUi
+                    ? 0
+                    : inEndCrashWhite || overlayStage >= 3
+                      ? 0.42
+                      : overlayStage >= 2
+                        ? 0.32
+                        : 0.18,
                 imageRendering: "pixelated",
                 transformOrigin: "top left",
               }}
             />
 
-            {!prefersReduced && overlayStage >= 2 && !crashed && (
+            {!prefersReduced &&
+              overlayStage >= 2 &&
+              (!crashed || inEndCrashWhite) && (
               <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
                 {[0, 1, 2, 3, 4].map((i) => (
                   <motion.div
@@ -411,15 +483,19 @@ export default function GlitchOverlay() {
               </AnimatePresence>
             </div>
 
-            <motion.div
-              className="absolute inset-0 z-[5] bg-black"
-              initial={false}
-              animate={{ opacity: blackoutOpacity }}
-              transition={blackoutTransition}
-            />
+            {crashRevealUi || prefersReduced ? (
+              <div className="absolute inset-0 z-[5] bg-white" aria-hidden />
+            ) : (
+              <motion.div
+                className="absolute inset-0 z-[5] bg-black"
+                initial={false}
+                animate={{ opacity: blackoutOpacity }}
+                transition={blackoutTransition}
+              />
+            )}
 
             {/* CRT-style horizontal beam — “tube” energy collapse */}
-            {!prefersReduced && !crashed && (
+            {!prefersReduced && (!crashed || inEndCrashWhite) && (
               <div
                 className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center overflow-hidden"
                 aria-hidden
@@ -452,7 +528,9 @@ export default function GlitchOverlay() {
               />
             )}
 
-            {!prefersReduced && overlayStage >= 2 && !crashed && (
+            {!prefersReduced &&
+              overlayStage >= 2 &&
+              (!crashed || inEndCrashWhite) && (
               <motion.div
                 className="pointer-events-none absolute inset-[2%]"
                 style={{
@@ -467,28 +545,75 @@ export default function GlitchOverlay() {
           </motion.div>
 
           <AnimatePresence>
-            {crashed && (
+            {crashed && crashRevealUi && (
               <motion.div
-                className="absolute inset-0 z-[8] flex flex-col items-center justify-center gap-5 px-6"
+                key="crash-end"
+                className="absolute inset-0 z-[8] flex flex-col items-center justify-center bg-white px-6"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Martin OS. Easter egg — nothing was harmed. Press Reboot to continue."
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.22, ease: "easeOut" }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
               >
-                <p className="text-center font-mono text-sm text-neutral-500">
-                  System restored from safe state.
-                  <br />
-                  <span className="text-neutral-400">(Easter egg — nothing was harmed.)</span>
-                </p>
-                <motion.button
-                  type="button"
-                  className="rounded-xl border border-white/20 bg-white/10 px-8 py-3 font-medium text-white shadow-lg backdrop-blur-md transition-colors hover:bg-white/18 focus-visible:outline focus-visible:ring-2 focus-visible:ring-white/50"
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 360, damping: 26, delay: 0.12 }}
-                  onClick={handleReboot}
+                <motion.div
+                  className="flex w-full max-w-[280px] flex-col items-center gap-5 sm:max-w-[300px] sm:gap-6"
+                  initial={
+                    prefersReduced ? false : { opacity: 0, y: 14, filter: "blur(8px)" }
+                  }
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{
+                    duration: prefersReduced ? 0 : 0.44,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
                 >
-                  Reboot
-                </motion.button>
+                  <div className="relative w-[min(112px,30vw)] shrink-0">
+                    <img
+                      src="/images/crash-face.svg"
+                      alt=""
+                      className="block h-auto w-full"
+                      width={248}
+                      height={271}
+                      decoding="async"
+                    />
+                  </div>
+                  <img
+                    src={CRASH_TITLE_SRC}
+                    alt="Martin OS"
+                    className="h-auto w-[min(200px,54vw)] max-w-full"
+                    width={283}
+                    height={54}
+                    decoding="async"
+                  />
+                  <p className="px-1 text-center text-xs leading-snug text-black/50 sm:text-sm">
+                    (Easter egg — nothing was harmed.)
+                  </p>
+                  <motion.button
+                    type="button"
+                    className="flex h-12 min-w-[140px] cursor-pointer items-center justify-center rounded-xl bg-[#141414] px-8 text-center text-lg font-medium leading-8 text-white shadow-sm transition-shadow duration-200 focus-visible:outline focus-visible:ring-2 focus-visible:ring-black/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                    initial={prefersReduced ? false : { scale: 0.94, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 380,
+                      damping: 28,
+                      delay: prefersReduced ? 0 : 0.08,
+                    }}
+                    whileHover={
+                      prefersReduced
+                        ? {}
+                        : {
+                            scale: 1.04,
+                            backgroundColor: "#2a2a2a",
+                            boxShadow: "0 10px 28px rgba(0,0,0,0.22)",
+                          }
+                    }
+                    whileTap={prefersReduced ? {} : { scale: 0.97 }}
+                    onClick={handleReboot}
+                  >
+                    Reboot
+                  </motion.button>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
