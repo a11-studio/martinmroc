@@ -31,7 +31,12 @@ function getDefaultPosition(icon: (typeof DESKTOP_ICONS)[0]) {
   };
 }
 
-export default function Desktop() {
+type DesktopProps = {
+  /** When false, dock / icons stay visually hidden (boot splash covers). When true, play entrance motion. */
+  entranceGateOpen?: boolean;
+};
+
+export default function Desktop({ entranceGateOpen = true }: DesktopProps) {
   const desktopRef = useRef<HTMLDivElement>(null);
   const isCompactDesktop = useIsCompactDesktop();
   const iconMetricsRef = useRef<IconMetrics>(ICON_METRICS.normal);
@@ -184,7 +189,7 @@ export default function Desktop() {
 
       {/* Layer 1 — Desktop icons */}
       <div className="absolute inset-0">
-        {DESKTOP_ICONS.map((icon) => {
+        {DESKTOP_ICONS.map((icon, index) => {
           const position = iconPositions[icon.id] ?? getDefaultPosition(icon);
           return (
             <DesktopIcon
@@ -192,6 +197,8 @@ export default function Desktop() {
               icon={icon}
               position={position}
               compact={isCompactDesktop}
+              entranceGateOpen={entranceGateOpen}
+              entranceIndex={index}
             />
           );
         })}
@@ -201,7 +208,7 @@ export default function Desktop() {
       <WindowManager />
 
       {/* Layer 4 — Dock */}
-      <Dock />
+      <Dock entranceGateOpen={entranceGateOpen} />
 
       {/* Layer 5 — Context menu (portalled above everything) */}
       <ContextMenu />

@@ -20,6 +20,10 @@ interface DesktopIconProps {
   position: { x: number; y: number };
   /** Pod 1200px — menšie thumb + label (zarovnané s ICON_METRICS v Desktop) */
   compact?: boolean;
+  /** After boot splash — false keeps icon visually hidden until gate opens */
+  entranceGateOpen?: boolean;
+  /** Stagger order for entrance spring */
+  entranceIndex?: number;
 }
 
 const LAYOUT = {
@@ -47,7 +51,13 @@ const LAYOUT = {
   },
 } as const;
 
-function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps) {
+function DesktopIconInner({
+  icon,
+  position,
+  compact = false,
+  entranceGateOpen = true,
+  entranceIndex = 0,
+}: DesktopIconProps) {
   const L = compact ? LAYOUT.compact : LAYOUT.normal;
   const prefersReduced = useReducedMotion();
   const { openWindow } = useWindowStore();
@@ -174,7 +184,15 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
     >
       <motion.div
         className="flex flex-col items-center"
-        style={{ width: L.outerW, gap: L.gap }}
+        style={{
+          width: L.outerW,
+          gap: L.gap,
+          willChange:
+            !entranceGateOpen && !iconDead && !iconCorrupting
+              ? "transform, opacity"
+              : "auto",
+        }}
+        initial={false}
         animate={
           iconDead
             ? {
@@ -182,12 +200,13 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
                 y: 52,
                 scale: 0.78,
                 filter: "blur(8px) saturate(0)",
-                transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
               }
             : iconCorrupting
               ? {
                   opacity: [1, 0.82, 0.92, 0.78, 0.88, 1],
                   x: [0, -2, 2, -1.5, 1, 0],
+                  y: 0,
+                  scale: 1,
                   rotate: [0, -1.5, 1.5, -1, 0],
                   filter: [
                     "hue-rotate(0deg) contrast(1)",
@@ -195,9 +214,25 @@ function DesktopIconInner({ icon, position, compact = false }: DesktopIconProps)
                     "hue-rotate(-20deg) contrast(1.08)",
                     "hue-rotate(0deg) contrast(1)",
                   ],
-                  transition: { duration: 0.85, ease: "easeInOut" },
                 }
-              : { opacity: 1, y: 0, x: 0, scale: 1, rotate: 0, filter: "none" }
+              : entranceGateOpen
+                ? { opacity: 1, y: 0, x: 0, scale: 1, rotate: 0, filter: "none" }
+                : { opacity: 0, y: 22, x: 0, scale: 0.86, rotate: 0, filter: "none" }
+        }
+        transition={
+          iconDead
+            ? { duration: 0.7, ease: [0.22, 1, 0.36, 1] }
+            : iconCorrupting
+              ? { duration: 0.85, ease: "easeInOut" }
+              : prefersReduced || !entranceGateOpen
+                ? { duration: 0 }
+                : {
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 28,
+                    mass: 0.82,
+                    delay: 0.04 * entranceIndex,
+                  }
         }
       >
       {/* Thumbnail container — selection highlight wraps this */}

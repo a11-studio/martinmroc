@@ -8,7 +8,18 @@ import { DOCK_ITEMS, DOCK_TRASH } from "@/data/projects";
 import { useWindowStore } from "@/store/windowStore";
 import { useGlitchStore, GLITCH_TIMELINE } from "@/store/glitchStore";
 
-export default function Dock() {
+const BOOT_GATE_HIDDEN = {
+  y: 128,
+  opacity: 0,
+  scale: 0.9,
+  filter: "blur(8px)",
+} as const;
+
+type DockProps = {
+  entranceGateOpen?: boolean;
+};
+
+export default function Dock({ entranceGateOpen = true }: DockProps) {
   const isAnyMaximized = useWindowStore((s) => s.windows.some((w) => w.isMaximized));
   const windows = useWindowStore((s) => s.windows);
   const restoreWindow = useWindowStore((s) => s.restoreWindow);
@@ -26,6 +37,7 @@ export default function Dock() {
   const dockGlitch = dockPhase !== "alive";
 
   const dockAnimate = useMemo(() => {
+    if (!entranceGateOpen) return { ...BOOT_GATE_HIDDEN };
     if (dockPhase === "failing") {
       return {
         y: 132,
@@ -44,9 +56,10 @@ export default function Dock() {
     }
     if (isAnyMaximized) return { y: 100, opacity: 0, scale: 1, filter: "none" };
     return { y: 0, opacity: 1, scale: 1, filter: "none" };
-  }, [dockPhase, isAnyMaximized]);
+  }, [entranceGateOpen, dockPhase, isAnyMaximized]);
 
   const dockTransition = useMemo(() => {
+    if (!entranceGateOpen) return { duration: 0 };
     if (dockPhase === "failing") {
       return {
         duration: prefersReduced ? 0.46 : GLITCH_TIMELINE.dockDeathMs / 1000,
@@ -56,19 +69,30 @@ export default function Dock() {
     if (dockPhase === "dead") {
       return { duration: 0.2 };
     }
-    return { type: "spring" as const, stiffness: 380, damping: 38, mass: 1 };
-  }, [dockPhase, prefersReduced]);
+    if (prefersReduced) {
+      return { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const };
+    }
+    return {
+      type: "spring" as const,
+      stiffness: 340,
+      damping: 32,
+      mass: 0.92,
+      delay: 0.06,
+    };
+  }, [entranceGateOpen, dockPhase, prefersReduced]);
 
   return (
     // Static wrapper keeps centering — motion.div handles y + opacity only
     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-end">
       <motion.div
-        initial={{ y: 80, opacity: 0 }}
+        initial={false}
         animate={dockAnimate}
         transition={dockTransition}
         style={{
           pointerEvents:
-            isAnyMaximized || dockGlitch ? "none" : "auto",
+            !entranceGateOpen || isAnyMaximized || dockGlitch ? "none" : "auto",
+          // Promote layer while hidden under boot so the first spring is cheaper
+          willChange: !entranceGateOpen ? "transform, opacity, filter" : "auto",
         }}
         role="toolbar"
         aria-label="Dock"

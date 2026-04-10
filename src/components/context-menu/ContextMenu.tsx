@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useDesktopStore } from "@/store/desktopStore";
+import {
+  useDesktopStore,
+  computeDefaultIconPositions,
+} from "@/store/desktopStore";
 import { useWindowStore } from "@/store/windowStore";
 import { sortByPosition, computeCleanupGrid, CLEANUP_SPRING } from "@/lib/cleanup";
 import { animate } from "framer-motion";
@@ -27,7 +30,6 @@ export default function ContextMenu() {
     resetIconPositions,
     sortIconsByName,
     setIconPosition,
-    getCleanupPositions,
   } = useDesktopStore();
 
   const { windows } = useWindowStore();
@@ -61,12 +63,33 @@ export default function ContextMenu() {
     });
 
     closeContextMenu();
-  }, [iconPositions, prefersReduced, setIconPosition, closeContextMenu, getCleanupPositions]);
+  }, [iconPositions, prefersReduced, setIconPosition, closeContextMenu]);
 
   const handleReset = useCallback(() => {
-    resetIconPositions();
+    const defaults = computeDefaultIconPositions();
+    const ids = Object.keys(defaults);
+
+    if (prefersReduced) {
+      resetIconPositions();
+      closeContextMenu();
+      return;
+    }
+
+    const animations = ids.map((id) => {
+      const el = document.querySelector<HTMLElement>(
+        `[data-icon-id="${id}"]`,
+      );
+      const target = defaults[id];
+      if (!el || !target) return Promise.resolve();
+
+      return animate(el, { x: target.x, y: target.y }, CLEANUP_SPRING);
+    });
+
+    void Promise.all(animations).then(() => {
+      resetIconPositions();
+    });
     closeContextMenu();
-  }, [resetIconPositions, closeContextMenu]);
+  }, [prefersReduced, resetIconPositions, closeContextMenu]);
 
   const handleSort = useCallback(() => {
     sortIconsByName();

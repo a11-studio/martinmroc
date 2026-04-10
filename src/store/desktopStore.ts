@@ -40,6 +40,11 @@ const buildDefaultPositions = (): Record<string, Position> => {
   );
 };
 
+/** Same map as `resetIconPositions` — for imperative animate-then-commit flows */
+export function computeDefaultIconPositions(): Record<string, Position> {
+  return buildDefaultPositions();
+}
+
 export const useDesktopStore = create<DesktopStore>((set, get) => ({
   // Initialise lazily — components will hydrate this on mount
   iconPositions: {},

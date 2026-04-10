@@ -99,6 +99,8 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <head>
         <link rel="preload" href="/images/bg.png" as="image" />
+        <link rel="preload" href="/images/boot-face.svg" as="image" />
+        <link rel="preload" href="/images/Martin%20OS.svg" as="image" />
       </head>
       <body className="h-full overflow-hidden bg-[#6b8fd6] antialiased">
         <PersonJsonLd />

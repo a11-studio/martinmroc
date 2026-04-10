@@ -1,13 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { MacBootChunkFallback } from "@/components/loading/MacBootLoader";
 
 // Dynamically import to ensure no SSR for the interactive desktop
 const RootScene = dynamic(() => import("@/components/RootScene"), {
   ssr: false,
-  loading: () => (
-    <div className="w-full h-full bg-[#799cea] flex items-center justify-center" />
-  ),
+  loading: () => <MacBootChunkFallback />,
 });
 
 export default function Home() {
