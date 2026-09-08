@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { getMetadataBase } from "@/lib/site";
 import {
@@ -106,6 +107,7 @@ export default function RootLayout({
       <body className="h-full overflow-hidden bg-[#6b8fd6] antialiased">
         <PersonJsonLd />
         {children}
+        <Analytics />
       </body>
     </html>
   );
